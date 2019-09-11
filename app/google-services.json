@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "892859805056",
+    "firebase_url": "https://firstlineconnect-development.firebaseio.com",
+    "project_id": "firstlineconnect-development",
+    "storage_bucket": "firstlineconnect-development.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:892859805056:android:0f4faf588c5cd1b6",
+        "android_client_info": {
+          "package_name": "com.example.socketconnectionwebrtc"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "892859805056-n7ieseup57pm03u3e3g1gjcg3efl14mk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.socketconnectionwebrtc",
+            "certificate_hash": "00fc47145d49569325b37ec75c275a5013181bd7"
+          }
+        },
+        {
+          "client_id": "892859805056-fe4hi3j2u3s3ruqbapkghhgu54gpdmhb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOGx40xRBmqrPkrniIrQVrfze4bit1erI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "892859805056-fe4hi3j2u3s3ruqbapkghhgu54gpdmhb.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "892859805056-kdikqrf8ifpbgv1carod4hco0ncep9f3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "dk.miracle.FirstLineConnect"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

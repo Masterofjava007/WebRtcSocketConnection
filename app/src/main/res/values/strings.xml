@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">SocketConnectionWebRTC</string>
+    <string name="internetConnectioNotFound">No internet found..</string>
+</resources>
