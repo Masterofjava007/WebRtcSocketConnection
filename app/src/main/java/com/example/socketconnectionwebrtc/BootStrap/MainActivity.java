@@ -1,6 +1,5 @@
 package com.example.socketconnectionwebrtc.BootStrap;
 
-import android.app.Notification;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -19,65 +18,56 @@ import androidx.camera.core.ImageCaptureConfig;
 import androidx.camera.core.Preview;
 import androidx.camera.core.PreviewConfig;
 import androidx.core.app.ActivityCompat;
-import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
-import androidx.lifecycle.LifecycleOwner;
 
 import com.example.socketconnectionwebrtc.Enum.MessageType;
-import com.example.socketconnectionwebrtc.EventHandler.EventHandler;
 import com.example.socketconnectionwebrtc.EventHandler.IEventListener;
-import com.example.socketconnectionwebrtc.EventHandler.IEventStarter;
-import com.example.socketconnectionwebrtc.EventHandler.INotifier;
-import com.example.socketconnectionwebrtc.Login.LoginManager;
-import com.example.socketconnectionwebrtc.MessageNotifier;
-import com.example.socketconnectionwebrtc.MessageShaper.MessageManager;
-import com.example.socketconnectionwebrtc.Model.BaseMessage;
 import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
 import com.example.socketconnectionwebrtc.Model.InitiaeCallMessage;
-import com.example.socketconnectionwebrtc.Model.OfferMessage;
-import com.example.socketconnectionwebrtc.Model.RoomDetails;
 import com.example.socketconnectionwebrtc.R;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
-import com.example.socketconnectionwebrtc.UiHandler.UiActivity;
 import com.google.firebase.auth.FirebaseAuth;
 
 import android.util.Size;
 import android.graphics.Matrix;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.HeaderViewListAdapter;
 import android.widget.Toast;
 
-import java.io.IOException;
 
-
-public class MainActivity extends AppCompatActivity implements IEventStarter {
+public class MainActivity extends AppCompatActivity  {
     private int REQUEST_CODE_PERMISSION = 10;
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA"};
     private static final String TAG = "MainActivity";
     private FirebaseAuth auth;
     SocketConnectionHandler socketConnectionHandler = new SocketConnectionHandler();
+    private FrameLayout frameLayout;
+    private TextureView textureView;
 
-    TextureView textureView;
-
-    INotifier notifier;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
+        setContentView(R.layout.activity_my_fragment);
 
         auth = FirebaseAuth.getInstance();
 
         textureView = findViewById(R.id.view_finder1);
+        frameLayout = findViewById(R.id.frameLayout);
 
         ConnectToSocket();
-        if (allPermissionsGranted()) {
+        try {
             startCamera();
-        } else {
-            ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSION);
+        }catch (Exception e) {
+            Log.d(TAG, "onCreate: " + e);
         }
-        // ConnectToSocket();
+
+
+
+
+
 
         Log.d(TAG, "onCreate: Starting");
 
@@ -216,6 +206,35 @@ public class MainActivity extends AppCompatActivity implements IEventStarter {
         return true;
     }
 
+
+
+
+    public void notify(MessageType type, BaseMessageHandler<InitiaeCallMessage> initiaeCallMessageBaseMessage) {
+        Log.d(TAG, "DialogStarterBox: DialogStarter");
+        AlertDialog.Builder alertDialogBox = new AlertDialog.Builder(MainActivity.this);
+        alertDialogBox.setMessage(initiaeCallMessageBaseMessage.getPayload().getName());
+        alertDialogBox.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                Log.d(TAG, "onClick: Fair");
+            }
+        });
+        alertDialogBox.setNegativeButton("No", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                MainActivity.this.finish();
+            }
+        });
+        alertDialogBox.setCancelable(false);
+        AlertDialog finalDialog = alertDialogBox.create();
+        finalDialog.show();
+    }
+
+
+}
+
+
+/*
     @Override
     public void notifierInfinitiCall(BaseMessageHandler<InitiaeCallMessage> initiateCallMessage) {
         Log.d(TAG, "DialogStarterBox: DialogStarter");
@@ -237,8 +256,9 @@ public class MainActivity extends AppCompatActivity implements IEventStarter {
         AlertDialog finalDialog = alertDialogBox.create();
         finalDialog.show();
     }
+*/
 
-}
+
 
 
 /*

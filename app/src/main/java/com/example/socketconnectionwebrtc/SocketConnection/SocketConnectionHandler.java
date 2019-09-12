@@ -3,16 +3,9 @@ package com.example.socketconnectionwebrtc.SocketConnection;
 import android.util.Log;
 
 import com.example.socketconnectionwebrtc.EventHandler.EventHandler;
-import com.example.socketconnectionwebrtc.EventHandler.INotifier;
-import com.example.socketconnectionwebrtc.EventHandler.UiHandler;
-import com.example.socketconnectionwebrtc.MessageShaper.MessageManager;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
 import com.example.socketconnectionwebrtc.Enum.MessageType;
-import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
-import com.example.socketconnectionwebrtc.Model.InitiaeCallMessage;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
-import com.example.socketconnectionwebrtc.SendMessageNotifier;
-import com.example.socketconnectionwebrtc.UiHandler.UiActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.gson.Gson;
 import com.neovisionaries.ws.client.WebSocket;
@@ -21,16 +14,15 @@ import com.neovisionaries.ws.client.WebSocketException;
 import com.neovisionaries.ws.client.WebSocketFactory;
 
 import java.io.IOException;
-import java.util.EventListener;
 import java.util.List;
 import java.util.Map;
 
 
 public class SocketConnectionHandler {
     private static final String TAG = "SocketConnectionHandler";
-    private MessageManager messageManager;
+
     private FirebaseAuth auth;
-    private EventHandler eventHandler = new EventHandler();
+    EventHandler eventHandler = new EventHandler();
 
     public SocketConnectionHandler() {
     }
@@ -55,6 +47,7 @@ public class SocketConnectionHandler {
 
                             Log.d(TAG, "onTextMessage: Message from socket: " + " -- " + message);
                             eventHandler.notifierInfinitiCall(message);
+
                         }
 
                         @Override
@@ -78,7 +71,7 @@ public class SocketConnectionHandler {
                             Log.d(TAG, "onConnected: Connected!!  ");
                             wss.sendText(json);
 
-                            //new UiHandler().notifyForViewCameraStart();
+
                             Log.d(TAG, "onConnected: works");
 
 

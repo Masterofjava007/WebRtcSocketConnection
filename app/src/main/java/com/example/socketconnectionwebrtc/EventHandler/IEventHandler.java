@@ -11,8 +11,9 @@ import com.google.firebase.events.Event;
 public interface IEventHandler {
 
 
-
-    <P>void notify(MessageType type, P Payload);
+    void register(MessageType type, BaseMessageHandler baseMessageHandler);
+    void notify(MessageType type, BaseMessageHandler<InitiaeCallMessage> initiaeCallMessageBaseMessage);
+    void notifierInfinitiCall(String message);
 /*
     void notifierInfinitiCall(MessageType type, IEventHandler listener);
     //void notifierInfinitiCall(BaseMessageHandler<InitiaeCallMessage> initiateCallMessage);
