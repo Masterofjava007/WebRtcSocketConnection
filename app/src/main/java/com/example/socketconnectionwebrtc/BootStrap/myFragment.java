@@ -1,6 +1,7 @@
 package com.example.socketconnectionwebrtc.BootStrap;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 
 import android.os.Bundle;
@@ -13,7 +14,7 @@ import com.example.socketconnectionwebrtc.EventHandler.IEventListener;
 import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
 import com.example.socketconnectionwebrtc.R;
 
-public class myFragment extends Fragment implements IEventListener {
+public class myFragment extends DialogFragment {
     private static final String TAG = "myFragment";
     private View view;
 
@@ -27,10 +28,4 @@ public class myFragment extends Fragment implements IEventListener {
 
     }
 
-    @Override
-    public void execute(BaseMessageHandler initiaeCallMessageBaseMessage) {
-
-
-        Log.d(TAG, "execute: ");
-    }
 }
