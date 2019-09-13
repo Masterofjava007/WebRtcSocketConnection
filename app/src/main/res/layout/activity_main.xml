@@ -9,7 +9,11 @@
     <TextureView
         android:id="@+id/view_finder1"
         android:layout_width="406dp"
-        android:layout_height="727dp" />
+        android:layout_height="727dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <FrameLayout
         android:id="@+id/frameLayout"

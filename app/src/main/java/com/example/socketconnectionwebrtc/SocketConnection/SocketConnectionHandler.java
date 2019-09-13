@@ -28,7 +28,7 @@ public class SocketConnectionHandler {
     }
 
     //pass callback in parameters
-    public void socketConnect() throws IOException  {
+    public void socketConnect() throws IOException {
 
         WebSocketFactory factory = new WebSocketFactory();
         Log.d(TAG, "run: InSide try");
@@ -38,7 +38,7 @@ public class SocketConnectionHandler {
             public void run() {
                 Log.d(TAG, "connectSocket: Entered connectSocket Method");
                 try {
-                    Log.d(TAG, "run: " );
+                    Log.d(TAG, "run: ");
                     Log.d(TAG, "run: Connected");
                     wss.addListener(new WebSocketAdapter() {
 
@@ -47,6 +47,7 @@ public class SocketConnectionHandler {
 
                             Log.d(TAG, "onTextMessage: Message from socket: " + " -- " + message);
                             eventHandler.notifierInfinitiCall(message);
+
 
                         }
 
@@ -73,8 +74,6 @@ public class SocketConnectionHandler {
 
 
                             Log.d(TAG, "onConnected: works");
-
-
 
 
                         }

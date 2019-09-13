@@ -1,7 +1,6 @@
 package com.example.socketconnectionwebrtc.BootStrap;
 
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -17,13 +16,11 @@ import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureConfig;
 import androidx.camera.core.Preview;
 import androidx.camera.core.PreviewConfig;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 
-import com.example.socketconnectionwebrtc.Enum.MessageType;
-import com.example.socketconnectionwebrtc.EventHandler.IEventListener;
 import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
-import com.example.socketconnectionwebrtc.Model.InitiaeCallMessage;
 import com.example.socketconnectionwebrtc.R;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
 import com.google.firebase.auth.FirebaseAuth;
@@ -32,11 +29,10 @@ import android.util.Size;
 import android.graphics.Matrix;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-import android.widget.HeaderViewListAdapter;
 import android.widget.Toast;
 
 
-public class MainActivity extends AppCompatActivity  {
+public class MainActivity extends AppCompatActivity {
     private int REQUEST_CODE_PERMISSION = 10;
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA"};
     private static final String TAG = "MainActivity";
@@ -44,34 +40,59 @@ public class MainActivity extends AppCompatActivity  {
     SocketConnectionHandler socketConnectionHandler = new SocketConnectionHandler();
     private FrameLayout frameLayout;
     private TextureView textureView;
+    private ViewModel viewModel;
 
+    public MainActivity() {
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_my_fragment);
+        setContentView(R.layout.activity_main);
 
-        auth = FirebaseAuth.getInstance();
+        viewModel = new ViewModelProvider(this).get(ViewModel.class);
 
-        textureView = findViewById(R.id.view_finder1);
-        frameLayout = findViewById(R.id.frameLayout);
+        viewModel.liveData.observe(this, new Observer<String>() {
+            @Override
+            public void onChanged(String s) {
+                Log.d(TAG, "DialogStarterBox: DialogStarter");
+                AlertDialog.Builder alertDialogBox = new AlertDialog.Builder(MainActivity.this);
+                alertDialogBox.setMessage(s);
+                alertDialogBox.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        Log.d(TAG, "onClick: Fair");
+                    }
+                });
+                alertDialogBox.setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        MainActivity.this.finish();
+                    }
+                });
+                alertDialogBox.setCancelable(false);
+                AlertDialog finalDialog = alertDialogBox.create();
+                finalDialog.show();
 
-        ConnectToSocket();
-        try {
-            startCamera();
-        }catch (Exception e) {
-            Log.d(TAG, "onCreate: " + e);
-        }
+                auth = FirebaseAuth.getInstance();
+
+                textureView = findViewById(R.id.view_finder1);
+
+                frameLayout = findViewById(R.id.frameLayout);
+
+                ConnectToSocket();
+                try {
+                    startCamera();
+                } catch (
+                        Exception e) {
+                    Log.d(TAG, "onCreate: " + e);
+                }
+
+                Log.d(TAG, "onCreate: Starting");
 
 
-
-
-
-
-        Log.d(TAG, "onCreate: Starting");
-
-
+            }
+        });
     }
 
 
@@ -148,31 +169,6 @@ public class MainActivity extends AppCompatActivity  {
         textureView.setTransform(mx);
     }
 
-/*
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-
-        if (requestCode == REQUEST_CODE_PERMISSION) {
-            if (allPermissionsGranted()) {
-                //StartCamera();
-                Log.d(TAG, "onRequestPermissionsResult: Started Camera");
-            } else {
-                Toast.makeText(MainActivity.this, "Permission No Granted", Toast.LENGTH_SHORT).show();
-                finish();
-            }
-        }
-    }
-
-    private boolean allPermissionsGranted() {
-        for (String permission : REQUIRED_PERMISSIONS) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                return false;
-            }
-        }
-        return true;
-    }
-*/
-
     public void ConnectToSocket() {
         try {
             Log.d(TAG, "ConnectToSocket: Tryinger");
@@ -207,12 +203,10 @@ public class MainActivity extends AppCompatActivity  {
     }
 
 
-
-
-    public void notify(MessageType type, BaseMessageHandler<InitiaeCallMessage> initiaeCallMessageBaseMessage) {
+    public void notify(String name) {
         Log.d(TAG, "DialogStarterBox: DialogStarter");
         AlertDialog.Builder alertDialogBox = new AlertDialog.Builder(MainActivity.this);
-        alertDialogBox.setMessage(initiaeCallMessageBaseMessage.getPayload().getName());
+        alertDialogBox.setMessage(name);
         alertDialogBox.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
@@ -229,7 +223,6 @@ public class MainActivity extends AppCompatActivity  {
         AlertDialog finalDialog = alertDialogBox.create();
         finalDialog.show();
     }
-
 
 }
 
