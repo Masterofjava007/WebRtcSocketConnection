@@ -8,7 +8,7 @@ import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
 import com.example.socketconnectionwebrtc.Model.InitiaeCallMessage;
 
 public class RepoMessageHandler {
-    private LiveData <BaseMessageHandler<InitiaeCallMessage>> liveData;
+    private LiveData<BaseMessageHandler<InitiaeCallMessage>> liveData;
     private String name;
 
     public RepoMessageHandler(LiveData<BaseMessageHandler<InitiaeCallMessage>> liveData, String name) {
@@ -16,12 +16,12 @@ public class RepoMessageHandler {
         this.name = name;
     }
 
-    public LiveData<BaseMessageHandler<InitiaeCallMessage>> getLiveData(String name) {
-        return liveData;
+    public RepoMessageHandler(Application application) {
+
     }
 
-    public void setLiveData(LiveData<BaseMessageHandler<InitiaeCallMessage>> liveData) {
-        this.liveData = liveData;
+    public LiveData<BaseMessageHandler<InitiaeCallMessage>> getLiveData() {
+        return liveData;
     }
 
     public String getName() {
@@ -30,5 +30,9 @@ public class RepoMessageHandler {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public void setLiveData(String gettingType, String name) {
+        this.liveData = liveData;
     }
 }

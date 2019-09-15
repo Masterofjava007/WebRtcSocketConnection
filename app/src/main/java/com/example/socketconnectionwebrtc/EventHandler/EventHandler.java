@@ -40,7 +40,7 @@ public class EventHandler {
 
         if (gettingType.equals(String.valueOf(initiateCall))) {
             Log.d(TAG, "onCoverMessage: Rammer vi her?");
-            repoMessageHandler.getLiveData(unCoverMessage.getPayload().getName());
+            repoMessageHandler.setLiveData(gettingType, unCoverMessage.getPayload().getName());
 
         } else {
             Log.d(TAG, "onCoverMessage: HVAD SÅ");
