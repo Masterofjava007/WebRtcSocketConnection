@@ -4,8 +4,20 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".BootStrap.myFragment">
+    tools:context=".BootStrap.Fragment">
 
 
-
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="122dp"
+        android:layout_height="68dp"
+        android:layout_marginStart="144dp"
+        android:layout_marginTop="222dp"
+        android:layout_marginEnd="145dp"
+        android:layout_marginBottom="441dp"
+        android:text="Steffen"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

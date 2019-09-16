@@ -3,6 +3,8 @@ package com.example.socketconnectionwebrtc.EventHandler;
 
 import android.util.Log;
 
+import androidx.lifecycle.LiveData;
+
 import com.example.socketconnectionwebrtc.Enum.MessageType;
 import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
 import com.example.socketconnectionwebrtc.Model.InitiaeCallMessage;
@@ -10,21 +12,14 @@ import com.example.socketconnectionwebrtc.Repos.RepoMessageHandler;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
 
-
-import static com.example.socketconnectionwebrtc.Enum.MessageType.initiateCall;
-
-public class EventHandler {
-    RepoMessageHandler repoMessageHandler;
+public class EventHandler implements IEventListener {
+    private LiveData<List> liveData;
+    RepoMessageHandler repoMessageHandler = new RepoMessageHandler();
     Gson gson = new Gson();
+
     private static final String TAG = "EventHandler";
-    private Map<MessageType, IEventListener> decisionMaker = new ConcurrentHashMap<>();
-
-
-    private String gettingType;
-
 
     public void notifierInfinitiCall(String message) {
         Log.d(TAG, "onCoverMessage: WAS");
@@ -35,17 +30,49 @@ public class EventHandler {
                 (message, new TypeToken<BaseMessageHandler<InitiaeCallMessage>>
                         () {
                 }.getType());
+        MessageType[] decideMessage = MessageType.values();
+        for (MessageType messageType : decideMessage) {
 
-        gettingType = unCoverMessage.getType();
 
+            switch (messageType) {
+                case initiateCall:
+                    Log.d(TAG, "notifierInfinitiCall: Virker");
+                    observe(unCoverMessage);
+                    //repoMessageHandler.setLiveData(unCoverMessage.getPayload().getName());
+
+                    break;
+                case offer:
+                    break;
+                case acceptCall:
+                    break;
+                case createRoom:
+                    break;
+                case dismissCall:
+                    break;
+                default:
+                    Log.d(TAG, "notifierInfinitiCall: ajaj");
+
+            }
+        }
+/*
+        if (initiateCall.equals(gettingType)) {
+            Log.d(TAG, "notifierInfinitiCall: The one Before");
+            repoMessageHandler.setLiveData(initiateCall, unCoverMessage.getPayload().getName());
+        }
         if (gettingType.equals(String.valueOf(initiateCall))) {
             Log.d(TAG, "onCoverMessage: Rammer vi her?");
-            repoMessageHandler.setLiveData(gettingType, unCoverMessage.getPayload().getName());
+            repoMessageHandler.setLiveData(initiateCall, unCoverMessage.getPayload().getName());
+
 
         } else {
             Log.d(TAG, "onCoverMessage: HVAD SÅ");
         }
     }
+*/
+    }
 
-
+    @Override
+    public LiveData<String> observe(BaseMessageHandler<InitiaeCallMessage> unCoverMessage) {
+        return null;
+    }
 }

@@ -6,6 +6,33 @@
     android:layout_height="match_parent"
     tools:context=".BootStrap.MainActivity">
 
+
+    <view
+        class="androidx.appcompat.app.AlertController$RecycleListView"
+        android:id="@+id/recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:text="Hallo World Såå det tid"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+    </view>
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/textViewRecycleerView"
+        android:layout_width="213dp"
+        android:layout_height="147dp"
+        android:layout_marginStart="99dp"
+        android:layout_marginTop="235dp"
+        android:layout_marginEnd="99dp"
+        android:layout_marginBottom="349dp"
+        android:text="TextView"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <TextureView
         android:id="@+id/view_finder1"
         android:layout_width="406dp"
