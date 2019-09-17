@@ -1,5 +1,7 @@
 package com.example.socketconnectionwebrtc.SocketConnection;
 
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import com.example.socketconnectionwebrtc.EventHandler.EventHandler;
@@ -46,6 +48,12 @@ public class SocketConnectionHandler {
                         public void onTextMessage(WebSocket webSocket, String message) throws Exception {
 
                             Log.d(TAG, "onTextMessage: Message from socket: " + " -- " + message);
+                            new Handler(Looper.getMainLooper()).post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    eventHandler.notifierInfinitiCall(message);
+                                }
+                            });
                             eventHandler.notifierInfinitiCall(message);
 
 

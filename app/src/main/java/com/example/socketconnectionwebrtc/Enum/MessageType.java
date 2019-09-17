@@ -1,9 +1,10 @@
 package com.example.socketconnectionwebrtc.Enum;
 
-public enum MessageType {
+public enum MessageType  {
     createRoom,
     acceptCall,
     initiateCall,
     offer,
-    dismissCall
+    dismissCall,
+    joinedRoomParticipant
 }

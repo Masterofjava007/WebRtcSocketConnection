@@ -8,28 +8,45 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
 
+import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
 import com.example.socketconnectionwebrtc.R;
 
-public class Fragment extends DialogFragment {
+public class Frag extends Fragment {
+    private MyViewModel viewModel;
     private static final String TAG = "Fragment";
-    public Fragment() {
+
+
+    public Frag() {
+
     }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d(TAG, "onCreate: Hallo");
+
+
     }
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstance) {
-        return inflater.inflate(R.layout.activity_main, container, false);
-    }
 
+
+        return inflater.inflate(R.layout.activity_my_fragment, container, false);
+    }
+/*
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
@@ -56,9 +73,8 @@ public class Fragment extends DialogFragment {
         });
 
         return builder.create();
+*/
 
-
-    }
 
     @Override
     public void onResume() {

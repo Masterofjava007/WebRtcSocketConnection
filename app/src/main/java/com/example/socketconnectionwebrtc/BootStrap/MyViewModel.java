@@ -1,32 +1,51 @@
 package com.example.socketconnectionwebrtc.BootStrap;
 
 import android.app.Application;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 
-import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.ViewModel;
 
-import com.example.socketconnectionwebrtc.Repos.RepoMessageHandler;
+import com.example.socketconnectionwebrtc.EventHandler.IEventListener;
 
-public class MyViewModel extends AndroidViewModel {
-    private RepoMessageHandler repoMessageHandler;
-    private LiveData liveData;
-
-
-    public MyViewModel(@NonNull Application application) {
-        super(application);
-        repoMessageHandler = new RepoMessageHandler(application);
-
-        liveData = getAllLiveData();
-
+public class MyViewModel extends ViewModel implements  IEventListener {
+    @Override
+    protected void onCleared() {
+        Log.d(TAG, "onCleared: onCleared");
     }
 
-    public LiveData getAllLiveData() {
-        return liveData;
+    private  MutableLiveData<String> message;
+
+    public MyViewModel() {
+
+        this.message = new MutableLiveData<>();
     }
 
+    private static final String TAG =
+            "MyViewModel";
+    public LiveData<String> getMessage() {
+        if (message == null) {
+            message = new MutableLiveData<String>();
+
+        }
+        Log.d(TAG, "getMessageToUI: Sending Message");
+        System.out.println(message.getValue());
+
+        return message;
+    }
+
+    @Override
+    public void sendingMessage(String unCoverMessage) {
+        Log.d(TAG, "sendingMessage: enter sendingMessage");
+       
+                message.postValue(unCoverMessage);
+            }
 }
+
 
 
 

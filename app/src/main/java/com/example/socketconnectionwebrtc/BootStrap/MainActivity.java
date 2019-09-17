@@ -1,5 +1,7 @@
 package com.example.socketconnectionwebrtc.BootStrap;
 
+import android.app.Dialog;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -8,6 +10,8 @@ import android.view.Surface;
 import android.view.TextureView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraX;
 import androidx.camera.core.ImageCapture;
@@ -17,13 +21,18 @@ import androidx.camera.core.PreviewConfig;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.lifecycle.LifecycleEventObserver;
+import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.socketconnectionwebrtc.EventHandler.IEventListener;
+import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
 import com.example.socketconnectionwebrtc.R;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
+import com.google.android.gms.common.api.internal.LifecycleFragment;
 import com.google.firebase.auth.FirebaseAuth;
 
 import android.util.Size;
@@ -33,22 +42,22 @@ import android.widget.FrameLayout;
 import android.widget.Toast;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements IEventListener {
     private int REQUEST_CODE_PERMISSION = 10;
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA"};
     private static final String TAG = "MainActivity";
     private FirebaseAuth auth;
+    private MyViewModel myViewModel;
     SocketConnectionHandler socketConnectionHandler = new SocketConnectionHandler();
     private FrameLayout frameLayout;
     private TextureView textureView;
-    private MyViewModel viewModel;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
 
         RecyclerView recyclerView = findViewById(R.id.textViewRecycleerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -65,16 +74,30 @@ public class MainActivity extends AppCompatActivity {
         ConnectToSocket();
 
         try {
-            startCamera();
+            // startCamera();
         } catch (Exception e) {
             Log.d(TAG, "onCreate: " + e);
         }
 
 
-        Log.d(TAG, "onCreate: Starting");
-        MyViewModel model = ViewModelProviders.of(this).get(MyViewModel.class);
-      //  model.getAllLiveData().observe(new );
+        Log.d(TAG, "onCreate: Andrei");
+        myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
 
+        myViewModel.getMessage().observe(this, message -> {
+            Log.d(TAG, "onCreate: Working");
+            // update UI
+        });
+        //myViewModel.sendingMessage("Steffe");
+    }
+
+
+
+/*
+            Log.d(TAG, "onCreate: Rammer vi her?");
+            notifierInfinitiCall();
+            Toast.makeText(MainActivity.this, "hallo", Toast.LENGTH_LONG).show();
+            addFragment();
+*/
 
 /*
         ViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
@@ -94,20 +117,12 @@ public class MainActivity extends AppCompatActivity {
                 ft.commit();
             */
 
-    }
 
+    public void addFragment() {
 
-    public void addFragment(Fragment fragment, boolean addToBackStack, String tag) {
-
-        FragmentManager manager = getSupportFragmentManager();
-        FragmentTransaction ft = manager.beginTransaction();
-
-        if (addToBackStack) {
-            ft.addToBackStack(tag);
-        }
-
-        ft.replace(R.id.frameLayout, fragment, tag);
-        ft.commitAllowingStateLoss();
+        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+        ft.replace(R.id.frameLayout, new Frag());
+        ft.commit();
     }
 
 
@@ -242,16 +257,10 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-
-}
-
-
-/*
-    @Override
-    public void notifierInfinitiCall(BaseMessageHandler<InitiaeCallMessage> initiateCallMessage) {
+    public void notifierInfinitiCall() {
         Log.d(TAG, "DialogStarterBox: DialogStarter");
         AlertDialog.Builder alertDialogBox = new AlertDialog.Builder(MainActivity.this);
-        alertDialogBox.setMessage(initiateCallMessage.getPayload().getName());
+        alertDialogBox.setMessage("Steffen");
         alertDialogBox.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
@@ -268,7 +277,12 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog finalDialog = alertDialogBox.create();
         finalDialog.show();
     }
-*/
+
+    @Override
+    public void sendingMessage(String unCoverMessage) {
+        addFragment();
+    }
+}
 
 
 
