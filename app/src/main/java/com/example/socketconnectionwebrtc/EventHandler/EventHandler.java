@@ -17,7 +17,6 @@ import com.google.gson.reflect.TypeToken;
 import java.util.List;
 
 public class EventHandler {
-    private LiveData<List> liveData;
 
     Gson gson = new Gson();
 

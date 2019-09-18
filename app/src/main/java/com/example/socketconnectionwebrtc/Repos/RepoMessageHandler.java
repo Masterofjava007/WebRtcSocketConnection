@@ -7,7 +7,7 @@ import androidx.lifecycle.LiveData;
 import java.util.List;
 
 public class RepoMessageHandler {
-    private LiveData<List> liveData;
+   public LiveData<String> liveData;
 
 
 
@@ -20,15 +20,12 @@ public class RepoMessageHandler {
 
     }
 
-    public LiveData<List> getLiveData() {
+    public LiveData<String> getLiveData() {
         return liveData;
     }
 
-    public void setLiveData(LiveData<List> liveData) {
+    public void setLiveData(LiveData<String> liveData) {
         this.liveData = liveData;
     }
-
-
-
 }
 

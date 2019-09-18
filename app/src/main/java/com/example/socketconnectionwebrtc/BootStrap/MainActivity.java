@@ -28,12 +28,17 @@ import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.socketconnectionwebrtc.Enum.MessageType;
 import com.example.socketconnectionwebrtc.EventHandler.IEventListener;
-import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
+import com.example.socketconnectionwebrtc.EventHandler.SocketInterface;
+import com.example.socketconnectionwebrtc.Model.BaseMessage;
+import com.example.socketconnectionwebrtc.Model.RoomDetails;
 import com.example.socketconnectionwebrtc.R;
-import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
-import com.google.android.gms.common.api.internal.LifecycleFragment;
+import com.example.socketconnectionwebrtc.Repos.RepoMessageHandler;
+import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;
+//import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.gson.Gson;
 
 import android.util.Size;
 import android.graphics.Matrix;
@@ -41,16 +46,22 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity implements IEventListener {
+
+public class MainActivity extends AppCompatActivity implements IEventListener, SocketInterface {
     private int REQUEST_CODE_PERMISSION = 10;
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA"};
     private static final String TAG = "MainActivity";
     private FirebaseAuth auth;
     private MyViewModel myViewModel;
-    SocketConnectionHandler socketConnectionHandler = new SocketConnectionHandler();
+    private RepoMessageHandler repoMessageHandler = new RepoMessageHandler();
+    //SocketConnectionHandler socketConnectionHandler = new SocketConnectionHandler();
     private FrameLayout frameLayout;
+    Gson gson = new Gson();
+    OkHttpSocketConnection okHttpSocketConnection = new OkHttpSocketConnection();
     private TextureView textureView;
+    BaseMessage baseMessage = new BaseMessage(MessageType.createRoom, new RoomDetails("+4529933087", "Steffen"));
 
 
     @Override
@@ -58,11 +69,11 @@ public class MainActivity extends AppCompatActivity implements IEventListener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        okHttpSocketConnection.connect();
 
         RecyclerView recyclerView = findViewById(R.id.textViewRecycleerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setHasFixedSize(true);
-
 
         final Adapter adapter = new Adapter();
         recyclerView.setAdapter(adapter);
@@ -71,7 +82,7 @@ public class MainActivity extends AppCompatActivity implements IEventListener {
         textureView = findViewById(R.id.view_finder1);
         frameLayout = findViewById(R.id.frameLayout);
 
-        ConnectToSocket();
+        //ConnectToSocket();
 
         try {
             // startCamera();
@@ -227,7 +238,7 @@ public class MainActivity extends AppCompatActivity implements IEventListener {
     public void ConnectToSocket() {
         try {
             Log.d(TAG, "ConnectToSocket: Tryinger");
-            socketConnectionHandler.socketConnect();
+            //socketConnectionHandler.socketConnect();
             Log.d(TAG, "ConnectToSocket: JAJAJ");
         } catch (Exception e) {
             System.out.println(e);
@@ -281,6 +292,22 @@ public class MainActivity extends AppCompatActivity implements IEventListener {
     @Override
     public void sendingMessage(String unCoverMessage) {
         addFragment();
+    }
+
+
+    @Override
+    public void onOpen() {
+
+    }
+
+    @Override
+    public void onMessageRecived(String message) {
+
+    }
+
+    @Override
+    public void onMessageSending(String messsage) {
+
     }
 }
 

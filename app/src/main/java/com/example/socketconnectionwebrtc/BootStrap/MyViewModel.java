@@ -1,24 +1,20 @@
 package com.example.socketconnectionwebrtc.BootStrap;
 
-import android.app.Application;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
-
-import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
+import com.example.socketconnectionwebrtc.Repos.RepoMessageHandler;
 
-import com.example.socketconnectionwebrtc.EventHandler.IEventListener;
+public class MyViewModel extends ViewModel {
+    RepoMessageHandler repoMessageHandler = new RepoMessageHandler();
 
-public class MyViewModel extends ViewModel implements  IEventListener {
     @Override
     protected void onCleared() {
         Log.d(TAG, "onCleared: onCleared");
     }
 
-    private  MutableLiveData<String> message;
+    private MutableLiveData<String> message;
 
     public MyViewModel() {
 
@@ -27,6 +23,7 @@ public class MyViewModel extends ViewModel implements  IEventListener {
 
     private static final String TAG =
             "MyViewModel";
+
     public LiveData<String> getMessage() {
         if (message == null) {
             message = new MutableLiveData<String>();
@@ -38,12 +35,12 @@ public class MyViewModel extends ViewModel implements  IEventListener {
         return message;
     }
 
-    @Override
     public void sendingMessage(String unCoverMessage) {
         Log.d(TAG, "sendingMessage: enter sendingMessage");
-       
-                message.postValue(unCoverMessage);
-            }
+
+        message.postValue(unCoverMessage);
+
+    }
 }
 
 
