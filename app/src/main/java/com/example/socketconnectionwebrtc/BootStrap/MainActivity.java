@@ -1,7 +1,7 @@
 package com.example.socketconnectionwebrtc.BootStrap;
 
-import android.app.Dialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -9,8 +9,8 @@ import android.util.Rational;
 import android.view.Surface;
 import android.view.TextureView;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraX;
@@ -19,25 +19,24 @@ import androidx.camera.core.ImageCaptureConfig;
 import androidx.camera.core.Preview;
 import androidx.camera.core.PreviewConfig;
 import androidx.core.content.ContextCompat;
-import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-import androidx.lifecycle.LifecycleEventObserver;
-import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.socketconnectionwebrtc.Enum.MessageType;
-import com.example.socketconnectionwebrtc.EventHandler.IEventListener;
-import com.example.socketconnectionwebrtc.EventHandler.SocketInterface;
+import com.example.socketconnectionwebrtc.Login.LoginManager;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
+import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
+import com.example.socketconnectionwebrtc.Model.ParcableMessages;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
 import com.example.socketconnectionwebrtc.R;
-import com.example.socketconnectionwebrtc.Repos.RepoMessageHandler;
-import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;
-//import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
+//import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;
+//import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;
+import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.gson.Gson;
 
 import android.util.Size;
@@ -46,22 +45,28 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import org.webrtc.PeerConnectionFactory;
+import org.webrtc.PeerConnection;
+import org.webrtc.IceCandidate;
+import org.webrtc.SdpObserver;
+import org.webrtc.SessionDescription;
+
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+//import okhttp3.WebSocket;
 
 
-public class MainActivity extends AppCompatActivity implements IEventListener, SocketInterface {
+public class MainActivity extends AppCompatActivity {
     private int REQUEST_CODE_PERMISSION = 10;
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA"};
     private static final String TAG = "MainActivity";
     private FirebaseAuth auth;
     private MyViewModel myViewModel;
-    private RepoMessageHandler repoMessageHandler = new RepoMessageHandler();
-    //SocketConnectionHandler socketConnectionHandler = new SocketConnectionHandler();
-    private FrameLayout frameLayout;
-    Gson gson = new Gson();
-    OkHttpSocketConnection okHttpSocketConnection = new OkHttpSocketConnection();
+    private SocketConnectionHandler socketConnectionHandler;
+    private String getPayload;
     private TextureView textureView;
-    BaseMessage baseMessage = new BaseMessage(MessageType.createRoom, new RoomDetails("+4529933087", "Steffen"));
 
 
     @Override
@@ -69,73 +74,93 @@ public class MainActivity extends AppCompatActivity implements IEventListener, S
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        okHttpSocketConnection.connect();
+        Log.d(TAG, "onCreate: Andrei");
+        myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
+        /*
+        myViewModel.message.observe(this, message -> {
+            Log.d(TAG, "onCreate: Working");
+            // update UI
+        });
+
+         */
+
+        // Create the observer which updates the UI.
+        final Observer<String> nameObserver = newName -> {
+            dialog(newName);
+
+        };
+
+
+        // Observe the LiveData, passing in this activity as the LifecycleOwner and the observer.
+        myViewModel.getMessage().observe(this, nameObserver);
+
+
+        //okHttpSocketConnection.connect();
+
+
+        try {
+            socketConnectionHandler = new SocketConnectionHandler(this);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
 
         RecyclerView recyclerView = findViewById(R.id.textViewRecycleerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setHasFixedSize(true);
 
+
         final Adapter adapter = new Adapter();
         recyclerView.setAdapter(adapter);
 
+
         auth = FirebaseAuth.getInstance();
         textureView = findViewById(R.id.view_finder1);
-        frameLayout = findViewById(R.id.frameLayout);
 
-        //ConnectToSocket();
+
+        ConnectToSocket();
+
 
         try {
-            // startCamera();
+            startCamera();
         } catch (Exception e) {
             Log.d(TAG, "onCreate: " + e);
         }
 
-
-        Log.d(TAG, "onCreate: Andrei");
-        myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
-
-        myViewModel.getMessage().observe(this, message -> {
-            Log.d(TAG, "onCreate: Working");
-            // update UI
-        });
-        //myViewModel.sendingMessage("Steffe");
     }
 
+    private void dialog(String payload) {
+        //Bundle data = getIntent().getExtras();
+
+        //  String eventHandlerMessage = data.getString("eventHandlerValues");
 
 
-/*
-            Log.d(TAG, "onCreate: Rammer vi her?");
-            notifierInfinitiCall();
-            Toast.makeText(MainActivity.this, "hallo", Toast.LENGTH_LONG).show();
-            addFragment();
-*/
+        // Update the UI, in this case, a TextView.
+        //BaseMessageHandler base = new BaseMessageHandler();
 
-/*
-        ViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
-        ViewModel.getAllInfo().observe(this, new Observer<BaseMessageHandler<InitiaeCallMessage>>() {
-            @Override
-            public void onChanged(BaseMessageHandler<InitiaeCallMessage> initiaeCallMessageBaseMessageHandler) {
-                Toast.makeText(MainActivity.this, "Hallo", Toast.LENGTH_SHORT).show();
-                // adapter.setBaseMessageList();
-            }
-        });
-*/
+//        getPayload = base.getPayload().toString();
+        Log.d(TAG, "onCreate: Working");
 
-           /*     Log.d(TAG, "onChanged: Rammer VI her?");
-                DialogFragment dialogFragment = new DialogFragment();
-                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-                ft.replace(R.id.frameLayout, dialogFragment);
-                ft.commit();
-            */
+        new AlertDialog.Builder(this)
+                .setTitle("InitiateCall")
+                .setMessage(payload)
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        Log.d(TAG, "onClick: Dialog on click No");
+                        socketConnectionHandler.sendMessageToSocket(new BaseMessage(MessageType.rejectCall, new RoomDetails("+4529933087", "Steffen")));
+                    }
+                })
+                .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        Log.d(TAG, "onClick: Dialog On Click Yes");
 
+                        socketConnectionHandler.sendMessageToSocket(new BaseMessage(MessageType.acceptCall, new RoomDetails("+4529933087", "Steffen")));
+                    }
 
-    public void addFragment() {
-
-        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-        ft.replace(R.id.frameLayout, new Frag());
-        ft.commit();
+                }).show();
     }
-
 
     private void startCamera() {
         Log.d(TAG, "startCamera: Inside StartCamera");
@@ -210,35 +235,11 @@ public class MainActivity extends AppCompatActivity implements IEventListener, S
         textureView.setTransform(mx);
     }
 
-/*
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-
-        if (requestCode == REQUEST_CODE_PERMISSION) {
-            if (allPermissionsGranted()) {
-                //StartCamera();
-                Log.d(TAG, "onRequestPermissionsResult: Started Camera");
-            } else {
-                Toast.makeText(MainActivity.this, "Permission No Granted", Toast.LENGTH_SHORT).show();
-                finish();
-            }
-        }
-    }
-
-    private boolean allPermissionsGranted() {
-        for (String permission : REQUIRED_PERMISSIONS) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                return false;
-            }
-        }
-        return true;
-    }
-*/
 
     public void ConnectToSocket() {
         try {
             Log.d(TAG, "ConnectToSocket: Tryinger");
-            //socketConnectionHandler.socketConnect();
+            socketConnectionHandler.socketConnect();
             Log.d(TAG, "ConnectToSocket: JAJAJ");
         } catch (Exception e) {
             System.out.println(e);
@@ -288,104 +289,27 @@ public class MainActivity extends AppCompatActivity implements IEventListener, S
         AlertDialog finalDialog = alertDialogBox.create();
         finalDialog.show();
     }
-
-    @Override
-    public void sendingMessage(String unCoverMessage) {
-        addFragment();
-    }
-
-
-    @Override
-    public void onOpen() {
-
-    }
-
-    @Override
-    public void onMessageRecived(String message) {
-
-    }
-
-    @Override
-    public void onMessageSending(String messsage) {
-
-    }
-}
-
-
-
-
-/*
-    @Override
-    public void notifierInfinitiCall(BaseMessageHandler<InitiaeCallMessage> initiaeCallMessageBaseMessageHandler) {
-
-        Log.d(TAG, "DialogStarterBox: DialogStarter");
-        AlertDialog.Builder alertDialogBox = new AlertDialog.Builder(MainActivity.this);
-        alertDialogBox.setMessage(initiaeCallMessageBaseMessageHandler.getPayload().getName());
-        alertDialogBox.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                Log.d(TAG, "onClick: Fair");
-            }
-        });
-        alertDialogBox.setNegativeButton("No", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                MainActivity.this.finish();
-            }
-        });
-        alertDialogBox.setCancelable(false);
-        AlertDialog finalDialog = alertDialogBox.create();
-        finalDialog.show();
-    }
-
-}
-*/
-
-/*
-@Override
-    public void notifierOffer(final BaseMessageHandler<OfferMessage> offerMessageBaseMessageHandler) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Log.d(TAG, "DialogStarterBox: DialogStarter");
-                AlertDialog.Builder alertDialogBox = new AlertDialog.Builder(MainActivity.this);
-                alertDialogBox.setMessage(offerMessageBaseMessageHandler.getPayload().getSdp());
-                alertDialogBox.setCancelable(false);
-
-                AlertDialog finalDialog = alertDialogBox.create();
-                finalDialog.show();
-            }
-        });
-    }
-*/
-
 /*
     @Override
     public void onStart() {
         super.onStart();
         // Check if user is signed in (non-null) and update UI accordingly.
         FirebaseUser currentUser = auth.getCurrentUser();
-
         updateUI(currentUser);
     }
-*/
-/*
 
-    public void updateUI(FirebaseUser currentUser) {
-        if (currentUser != null) {
-            Log.d(TAG, "updateUI: User Already Registered");
-            System.out.println(currentUser.toString());
-            socketConnectionHandler.socketConnect(currentUser.getPhoneNumber());
-        } else {
-            Log.d(TAG, "updateUI: Here!");
-            socketConnectionHandler.socketConnect(phoneNumber);
+    private void updateUI(FirebaseUser currentUser) {
+        if(currentUser != null){
+            Toast.makeText(this, "Signed in Success full", Toast.LENGTH_SHORT).show();
+        }
+        else {
             Intent intent = new Intent(MainActivity.this, LoginManager.class);
             startActivity(intent);
-
         }
-
     }
-    */
+
+ */
+}
 
 
 

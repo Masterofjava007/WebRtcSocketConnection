@@ -1,10 +1,12 @@
 package com.example.socketconnectionwebrtc.EventHandler;
 
 
+import com.example.socketconnectionwebrtc.Model.InitiaeCallMessage;
+
 public interface IEventListener {
 
 
-    void sendingMessage(String unCoverMessage);
+    String sendingMessage(InitiaeCallMessage unCoverMessage);
 
 
 

@@ -1,8 +1,8 @@
 package com.example.socketconnectionwebrtc.SocketConnection;
-/*
-import android.os.Handler;
-import android.os.Looper;
+
 import android.util.Log;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.socketconnectionwebrtc.EventHandler.EventHandler;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
@@ -24,17 +24,23 @@ public class SocketConnectionHandler {
     private static final String TAG = "SocketConnectionHandler";
 
     private FirebaseAuth auth;
-    EventHandler eventHandler = new EventHandler();
-
-    public SocketConnectionHandler() {
+    private AppCompatActivity mActivity;
+    EventHandler eventHandler;
+    final WebSocket wss;
+    Gson gson = new Gson();
+    public SocketConnectionHandler(AppCompatActivity activity) throws IOException {
+        mActivity = activity;
+        eventHandler = new EventHandler(mActivity);
+        WebSocketFactory factory = new WebSocketFactory();
+        wss = factory.createSocket("wss://firstlineconnect.com:1338");
     }
 
     //pass callback in parameters
     public void socketConnect() throws IOException {
 
-        WebSocketFactory factory = new WebSocketFactory();
+
         Log.d(TAG, "run: InSide try");
-        final WebSocket wss = factory.createSocket("wss://firstlineconnect.com:1338");
+
         final Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -48,16 +54,9 @@ public class SocketConnectionHandler {
                         public void onTextMessage(WebSocket webSocket, String message) throws Exception {
 
                             Log.d(TAG, "onTextMessage: Message from socket: " + " -- " + message);
-                            new Handler(Looper.getMainLooper()).post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    eventHandler.notifierInfinitiCall(message);
-                                }
-                            });
-                            eventHandler.notifierInfinitiCall(message);
-
-
+                            eventHandler.messageHandler(message);
                         }
+
 
                         @Override
                         public void onError(WebSocket websocket, WebSocketException cause) throws Exception {
@@ -74,12 +73,9 @@ public class SocketConnectionHandler {
                         public void onConnected(WebSocket websocket, Map<String, List<String>> headers) throws Exception {
 
                             Log.d(TAG, "onConnected: On Connected");
-                            Gson gson = new Gson();
-                            BaseMessage base = new BaseMessage(MessageType.createRoom, new RoomDetails("+4529933087", "Steffen"));
-                            String json = gson.toJson(base);
-                            Log.d(TAG, "onConnected: Connected!!  ");
-                            wss.sendText(json);
 
+                            BaseMessage base = new BaseMessage(MessageType.createRoom, new RoomDetails("+4529933087", "Steffen"));
+                            sendMessageToSocket(base);
 
                             Log.d(TAG, "onConnected: works");
 
@@ -95,9 +91,21 @@ public class SocketConnectionHandler {
         thread.start();
     }
 
+    public void sendMessageToSocket(BaseMessage payload) {
+        Log.d(TAG, "sendMessageToSocket: Socket on Send");
+        Gson gson = new Gson();
+        String toJson = gson.toJson(payload);
+        if (wss != null){
+            wss.sendText(toJson);
+        }else {
+            Log.d(TAG, "sendMessageToSocket: dont work");
+        }
+
+    }
+
 
 }
-*/
+
 
 
 

@@ -5,6 +5,9 @@ public class BaseMessageHandler<T> {
     String type;
     T payload;
 
+    public BaseMessageHandler() {
+    }
+
     public BaseMessageHandler(String type) {
         this.type = type;
     }

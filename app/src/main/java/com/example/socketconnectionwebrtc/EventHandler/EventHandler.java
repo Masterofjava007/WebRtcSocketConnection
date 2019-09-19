@@ -1,34 +1,39 @@
 package com.example.socketconnectionwebrtc.EventHandler;
 
 
+import android.content.Intent;
 import android.util.Log;
-
-import androidx.lifecycle.LiveData;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProviders;
 
 import com.example.socketconnectionwebrtc.BootStrap.MainActivity;
 import com.example.socketconnectionwebrtc.BootStrap.MyViewModel;
 import com.example.socketconnectionwebrtc.Enum.MessageType;
 import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
 import com.example.socketconnectionwebrtc.Model.InitiaeCallMessage;
-import com.example.socketconnectionwebrtc.Repos.RepoMessageHandler;
+import com.example.socketconnectionwebrtc.Model.ParcableMessages;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import java.util.List;
 
 public class EventHandler {
+    private AppCompatActivity mActivity;
+
+    public EventHandler(AppCompatActivity activity) {
+        mActivity = activity;
+
+        myViewModel = ViewModelProviders.of(activity).get(MyViewModel.class);
+    }
 
     Gson gson = new Gson();
 
-    private MyViewModel myViewModel = new MyViewModel();
+    private MyViewModel myViewModel;
 
     private static final String TAG = "EventHandler";
 
-    public void notifierInfinitiCall(String message) {
-        Log.d(TAG, "onCoverMessage: WAS");
+    public void messageHandler(String message) {
+        Log.d(TAG, "messageHandler: Entered messageHandler");
 
-
-        System.out.println(message);
         BaseMessageHandler<InitiaeCallMessage> unCoverMessage = gson.fromJson
                 (message, new TypeToken<BaseMessageHandler<InitiaeCallMessage>>
                         () {
@@ -38,43 +43,36 @@ public class EventHandler {
         MessageType messageTypeEnum = MessageType.valueOf(messageType);
 
 
+
         String payload = unCoverMessage.getPayload().getName();
+        String type = unCoverMessage.getType();
         switch (messageTypeEnum) {
             case initiateCall:
-                Log.d(TAG, "notifierInfinitiCall: Virker");
+                Log.d(TAG, "messageHandler: Entering initiateCall");
+                Intent in = new Intent();
+                in.putExtra("eventHandlerValues", payload);
                 myViewModel.sendingMessage(payload);
-
-                Log.d(TAG, "notifierInfinitiCall: HVA");
-                //repoMessageHandler.setLiveData(unCoverMessage.getPayload().getName());
                 break;
             case offer:
+                Log.d(TAG, "messageHandler: Entering OfferCall");
                 break;
             case acceptCall:
+                Log.d(TAG, "messageHandler: Entering AcceptingCall");
                 break;
             case createRoom:
+                Log.d(TAG, "messageHandler: Entering createRoom");
                 break;
             case dismissCall:
+                Log.d(TAG, "messageHandler: Entering dismissCall");
+                break;
+            case joinedRoomParticipant:
+                Log.d(TAG, "messageHandler: Entering joinedRoomParticipant");
                 break;
             default:
-                Log.d(TAG, "notifierInfinitiCall: ajaj");
+                Log.d(TAG, "messageHandler: Entering default");
 
         }
     }
-/*
-        if (initiateCall.equals(gettingType)) {
-            Log.d(TAG, "notifierInfinitiCall: The one Before");
-            repoMessageHandler.setLiveData(initiateCall, unCoverMessage.getPayload().getName());
-        }
-        if (gettingType.equals(String.valueOf(initiateCall))) {
-            Log.d(TAG, "onCoverMessage: Rammer vi her?");
-            repoMessageHandler.setLiveData(initiateCall, unCoverMessage.getPayload().getName());
-
-
-        } else {
-            Log.d(TAG, "onCoverMessage: HVAD SÅ");
-        }
-    }
-*/
 }
 
 

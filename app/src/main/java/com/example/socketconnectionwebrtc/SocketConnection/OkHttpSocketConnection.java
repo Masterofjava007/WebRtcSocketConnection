@@ -1,11 +1,13 @@
 package com.example.socketconnectionwebrtc.SocketConnection;
 
-
+/*
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 
 import androidx.annotation.MainThread;
+import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 
 import com.example.socketconnectionwebrtc.Enum.MessageType;
@@ -14,7 +16,7 @@ import com.example.socketconnectionwebrtc.EventHandler.IEventListener;
 import com.example.socketconnectionwebrtc.EventHandler.SocketInterface;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
-import com.example.socketconnectionwebrtc.Repos.RepoMessageHandler;
+
 import com.google.gson.Gson;
 
 import java.io.IOException;
@@ -25,7 +27,7 @@ import okhttp3.Response;
 import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
 
-public class OkHttpSocketConnection extends WebSocketListener {
+public abstract class OkHttpSocketConnection extends WebSocketListener implements Handler.Callback {
     private static final String TAG = "OkHttpSocketConnection";
     private static final int NORMAL_CLOSURE = 4000;
     private OkHttpClient client = new OkHttpClient();
@@ -37,9 +39,15 @@ public class OkHttpSocketConnection extends WebSocketListener {
     private static final String URL_SOCKET_CONNECTION = "wss://firstlineconnect.com:1338";
 
 
+    public boolean handleMessage(@NonNull String message) {
+        Log.d(TAG, "handleMessage: HandlerMessage -> Okhttp" + message);
+        return false;
+    }
+
+
     //TODO Change it so name and phone number aren't predefined but take user input
     public interface messagePasserInterface {
-        @WorkerThread
+
         void onMessage(WebSocket webSocket, String text);
 
         @MainThread
@@ -49,7 +57,7 @@ public class OkHttpSocketConnection extends WebSocketListener {
     }
 
 
-    public void connect() {
+    public void connect()  {
         Log.d(TAG, "connect: Inside Connect");
 
 
@@ -88,18 +96,32 @@ public class OkHttpSocketConnection extends WebSocketListener {
 
     public void sendMessage(String message) {
         webSocket.send(message);
+        Log.d(TAG, "sendMessage: Message have been send and room is open waiting for incoming calls");
     }
 
     @Override
     public void onOpen(WebSocket webSocket, Response response) {
         Log.d(TAG, "onOpen: Connection Opened");
-        listener.onOpen();
+        BaseMessage baseMessage = new BaseMessage(MessageType.createRoom, new RoomDetails("+4529933087", "Steffen"));
+        String sendingMessageToSocket = gson.toJson(baseMessage);
+        sendMessage(sendingMessageToSocket);
+
     }
+
+
+
 
     @Override
     public void onMessage(WebSocket webSocket, String text) {
-            MAIN_THREAD.post(() -> listener.onMessageRecivedSendMain(text));
+        Log.d(TAG, "onMessage: Modtager vi en besked");
+        handleMessage(text);
+
+
+        MAIN_THREAD.post(() -> listener.onMessageRecivedSendMain(text));
     }
 
 
+
 }
+
+*/

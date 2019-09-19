@@ -6,5 +6,6 @@ public enum MessageType  {
     initiateCall,
     offer,
     dismissCall,
-    joinedRoomParticipant
+    joinedRoomParticipant,
+    rejectCall
 }
