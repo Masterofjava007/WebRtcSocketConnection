@@ -12,6 +12,7 @@ import com.example.socketconnectionwebrtc.Enum.MessageType;
 import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
 import com.example.socketconnectionwebrtc.Model.InitiaeCallMessage;
 import com.example.socketconnectionwebrtc.Model.ParcableMessages;
+import com.example.socketconnectionwebrtc.SocketConnection.WebRtcClient;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -21,14 +22,13 @@ public class EventHandler {
 
     public EventHandler(AppCompatActivity activity) {
         mActivity = activity;
-
         myViewModel = ViewModelProviders.of(activity).get(MyViewModel.class);
     }
 
     Gson gson = new Gson();
 
     private MyViewModel myViewModel;
-
+    private WebRtcClient webRtcClient = new WebRtcClient();
     private static final String TAG = "EventHandler";
 
     public void messageHandler(String message) {
@@ -43,18 +43,17 @@ public class EventHandler {
         MessageType messageTypeEnum = MessageType.valueOf(messageType);
 
 
-
-        String payload = unCoverMessage.getPayload().getName();
-        String type = unCoverMessage.getType();
         switch (messageTypeEnum) {
             case initiateCall:
                 Log.d(TAG, "messageHandler: Entering initiateCall");
+                String initiateCallPayload = unCoverMessage.getPayload().getName();
                 Intent in = new Intent();
-                in.putExtra("eventHandlerValues", payload);
-                myViewModel.sendingMessage(payload);
+                in.putExtra("eventHandlerValues", initiateCallPayload);
+                myViewModel.sendingMessage(initiateCallPayload);
                 break;
-            case offer:
+            case receiveOffer:
                 Log.d(TAG, "messageHandler: Entering OfferCall");
+                webRtcClient.mapPayloadToSession(message);
                 break;
             case acceptCall:
                 Log.d(TAG, "messageHandler: Entering AcceptingCall");

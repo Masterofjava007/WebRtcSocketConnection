@@ -1,19 +1,23 @@
 package com.example.socketconnectionwebrtc.Model;
 
+import org.webrtc.SessionDescription;
+
+
 public class OfferMessage {
-    String sdp;
+    SessionDescription sdp;
     String type;
 
-    public OfferMessage(String sdp, String type) {
+
+    public OfferMessage(SessionDescription sdp, String type) {
         this.sdp = sdp;
         this.type = type;
     }
 
-    public String getSdp() {
+    public SessionDescription getSdp() {
         return sdp;
     }
 
-    public void setSdp(String sdp) {
+    public void setSdp(SessionDescription sdp) {
         this.sdp = sdp;
     }
 
