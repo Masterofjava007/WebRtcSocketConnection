@@ -156,7 +156,7 @@ public class VerifyAccont extends AppCompatActivity {
                         } else {
 
 
-                            // Sign in failed, display a message and update the UI
+                            // Sign in failed, display a eventMessage and update the UI
                             Log.w(TAG, "signInWithCredential:failure", task.getException());
                             if (task.getException() instanceof FirebaseAuthInvalidCredentialsException) {
                                 // The verification code entered was invalid

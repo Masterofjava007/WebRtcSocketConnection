@@ -7,38 +7,47 @@ import androidx.lifecycle.ViewModel;
 
 public class MyViewModel extends ViewModel {
 
-
     @Override
     protected void onCleared() {
         Log.d(TAG, "onCleared: onCleared");
     }
 
-    public MutableLiveData<String> message;
-
+    public MutableLiveData<String> eventMessage;
+    public MutableLiveData<String> messageToWebRTC;
     public MyViewModel() {
 
-        this.message = new MutableLiveData<>();
+        this.messageToWebRTC = new MutableLiveData<>();
+        this.eventMessage = new MutableLiveData<>();
+    }
+
+    public LiveData<String> getMessageToWebRTC () {
+        if (messageToWebRTC == null) {
+            messageToWebRTC = new MutableLiveData<String>();
+        }
+        Log.d(TAG, "getMessageToWebRTC: Sending MessageToMain");
+        return messageToWebRTC;
     }
 
     private static final String TAG =
             "MyViewModel";
 
-    public LiveData<String> getMessage() {
-        if (message == null) {
-            message = new MutableLiveData<String>();
+    public LiveData<String> getEventMessage() {
+        if (eventMessage == null) {
+            eventMessage = new MutableLiveData<String>();
 
         }
         Log.d(TAG, "getMessageToUI: Sending Message");
-        System.out.println(message.getValue());
+        System.out.println(eventMessage.getValue());
 
-        return message;
+        return eventMessage;
     }
 
-    public void sendingMessage(String unCoverMessage) {
+    public void sendingMessage(String messageFromEventHandler) {
         Log.d(TAG, "sendingMessage: enter sendingMessage");
-        message.postValue(unCoverMessage);
+        eventMessage.postValue(messageFromEventHandler);
 
     }
+
 }
 
 

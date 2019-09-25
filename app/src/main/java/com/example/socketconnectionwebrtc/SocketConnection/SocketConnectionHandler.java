@@ -15,6 +15,8 @@ import com.neovisionaries.ws.client.WebSocketAdapter;
 import com.neovisionaries.ws.client.WebSocketException;
 import com.neovisionaries.ws.client.WebSocketFactory;
 
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +57,7 @@ public class SocketConnectionHandler {
 
                             Log.d(TAG, "onTextMessage: Message from socket: " + " -- " + message);
                             eventHandler.messageHandler(message);
+
                         }
 
 
@@ -104,6 +107,12 @@ public class SocketConnectionHandler {
     }
 
 
+    public void sendMessageToSocket(String message, JSONObject message1) {
+        Log.d(TAG, "sendMessageToSocket: WebRtcClient sending to socket");
+            wss.sendText(message + message1);
+
+
+    }
 }
 
 

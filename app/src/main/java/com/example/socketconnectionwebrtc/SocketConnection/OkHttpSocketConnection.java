@@ -39,19 +39,18 @@ public abstract class OkHttpSocketConnection extends WebSocketListener implement
     private static final String URL_SOCKET_CONNECTION = "wss://firstlineconnect.com:1338";
 
 
-    public boolean handleMessage(@NonNull String message) {
-        Log.d(TAG, "handleMessage: HandlerMessage -> Okhttp" + message);
+    public boolean handleMessage(@NonNull String eventMessage) {
+        Log.d(TAG, "handleMessage: HandlerMessage -> Okhttp" + eventMessage);
         return false;
     }
 
 
-    //TODO Change it so name and phone number aren't predefined but take user input
     public interface messagePasserInterface {
 
         void onMessage(WebSocket webSocket, String text);
 
         @MainThread
-        void onMessageRecivedSendMain(String message);
+        void onMessageRecivedSendMain(String eventMessage);
 
         void onOpen();
     }
@@ -80,7 +79,7 @@ public abstract class OkHttpSocketConnection extends WebSocketListener implement
             }
 
             @Override
-            public void onMessageRecivedSendMain(String message) {
+            public void onMessageRecivedSendMain(String eventMessage) {
 
             }
 
@@ -94,8 +93,8 @@ public abstract class OkHttpSocketConnection extends WebSocketListener implement
         };
     }
 
-    public void sendMessage(String message) {
-        webSocket.send(message);
+    public void sendMessage(String eventMessage) {
+        webSocket.send(eventMessage);
         Log.d(TAG, "sendMessage: Message have been send and room is open waiting for incoming calls");
     }
 

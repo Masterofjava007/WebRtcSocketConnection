@@ -1,7 +1,6 @@
 package com.example.socketconnectionwebrtc.BootStrap;
 
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -9,7 +8,6 @@ import android.util.Rational;
 import android.view.Surface;
 import android.view.TextureView;
 
-import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,41 +17,29 @@ import androidx.camera.core.ImageCaptureConfig;
 import androidx.camera.core.Preview;
 import androidx.camera.core.PreviewConfig;
 import androidx.core.content.ContextCompat;
-import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.socketconnectionwebrtc.Enum.MessageType;
-import com.example.socketconnectionwebrtc.Login.LoginManager;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
-import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
-import com.example.socketconnectionwebrtc.Model.ParcableMessages;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
 import com.example.socketconnectionwebrtc.R;
 //import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;
 //import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
+import com.example.socketconnectionwebrtc.WebRtc.WebRtcClient;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.gson.Gson;
 
 import android.util.Size;
 import android.graphics.Matrix;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.Toast;
 
-import org.webrtc.PeerConnectionFactory;
-import org.webrtc.PeerConnection;
-import org.webrtc.IceCandidate;
-import org.webrtc.SdpObserver;
-import org.webrtc.SessionDescription;
+import org.json.JSONException;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 //import okhttp3.WebSocket;
 
@@ -67,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
     private SocketConnectionHandler socketConnectionHandler;
     private String getPayload;
     private TextureView textureView;
-
+    private WebRtcClient webRtcClient = new WebRtcClient();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,22 +63,34 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "onCreate: Andrei");
         myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
         /*
-        myViewModel.message.observe(this, message -> {
+        myViewModel.eventMessage.observe(this, eventMessage -> {
             Log.d(TAG, "onCreate: Working");
             // update UI
         });
 
          */
 
-        // Create the observer which updates the UI.
-        final Observer<String> nameObserver = newName -> {
-            dialog(newName);
 
+        // Create the observer which updates the UI.
+        //TODO SPLIT DIALOG OG WEBRTC PAYLOAD
+        final Observer<String> nameObserver = newName -> {
+            Log.d(TAG, "onCreate: DET ALTSÅ HER");
+            if (newName.length() > 50) {
+                try {
+                    webRtcClient.mapPayloadToSession(newName);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                Log.d(TAG, "onCreate: HVAD ER NEWNAME" + newName);
+                //TODO FIX DIALOG SÅ HVERGANG MAN KLIKKER IKKE SPAMMER DET SAMME
+                dialog(newName);
+            }
         };
 
 
         // Observe the LiveData, passing in this activity as the LifecycleOwner and the observer.
-        myViewModel.getMessage().observe(this, nameObserver);
+        myViewModel.getEventMessage().observe(this, nameObserver);
 
 
         //okHttpSocketConnection.connect();
@@ -162,7 +160,7 @@ public class MainActivity extends AppCompatActivity {
                 }).show();
     }
 
-    private void startCamera() {
+    public void startCamera() {
         Log.d(TAG, "startCamera: Inside StartCamera");
         CameraX.unbindAll();
 

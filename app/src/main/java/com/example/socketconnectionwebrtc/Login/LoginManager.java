@@ -102,7 +102,7 @@ public class LoginManager extends AppCompatActivity {
 
 
                         } else {
-                            // If sign in fails, display a message to the user.
+                            // If sign in fails, display a eventMessage to the user.
                             Log.w(TAG, "createUserWithEmail:failure", task.getException());
                             Toast.makeText(LoginManager.this, "Authentication failed.",
                                     Toast.LENGTH_SHORT).show();

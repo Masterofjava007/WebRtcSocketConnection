@@ -1,23 +1,34 @@
 package com.example.socketconnectionwebrtc.Model;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+
 import org.webrtc.SessionDescription;
 
 
 public class OfferMessage {
-    SessionDescription sdp;
+    @SerializedName("sdp")
+    @Expose
+    String sdp;
+    @SerializedName("type")
+    @Expose
     String type;
 
 
-    public OfferMessage(SessionDescription sdp, String type) {
+    public OfferMessage(String sdp, String type) {
         this.sdp = sdp;
         this.type = type;
     }
 
-    public SessionDescription getSdp() {
+    public OfferMessage() {
+
+    }
+
+    public String getSdp() {
         return sdp;
     }
 
-    public void setSdp(SessionDescription sdp) {
+    public void setSdp(String sdp) {
         this.sdp = sdp;
     }
 
