@@ -30,7 +30,7 @@ public class EventHandler {
     Gson gson = new Gson();
 
     private MyViewModel myViewModel;
-    private WebRtcClient webRtcClient = new WebRtcClient();
+
     private static final String TAG = "EventHandler";
 
     public void messageHandler(String message) {

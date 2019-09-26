@@ -1,0 +1,466 @@
+Index: app/src/main/java/com/example/socketconnectionwebrtc/EventHandler/EventHandler.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.socketconnectionwebrtc.EventHandler;\r\n\r\n\r\nimport android.content.Intent;\r\nimport android.util.Log;\r\n\r\nimport androidx.appcompat.app.AppCompatActivity;\r\nimport androidx.lifecycle.ViewModelProviders;\r\n\r\nimport com.example.socketconnectionwebrtc.BootStrap.MyViewModel;\r\nimport com.example.socketconnectionwebrtc.Enum.MessageType;\r\nimport com.example.socketconnectionwebrtc.Model.BaseMessage;\r\nimport com.example.socketconnectionwebrtc.Model.BaseMessageHandler;\r\nimport com.example.socketconnectionwebrtc.Model.InitiaeCallMessage;\r\nimport com.example.socketconnectionwebrtc.Model.OfferMessage;\r\nimport com.example.socketconnectionwebrtc.WebRtc.WebRtcClient;\r\nimport com.google.gson.Gson;\r\nimport com.google.gson.reflect.TypeToken;\r\n\r\n\r\npublic class EventHandler {\r\n    private AppCompatActivity mActivity;\r\n    private String stringType, stringPayload;\r\n\r\n    public EventHandler(AppCompatActivity activity) {\r\n        mActivity = activity;\r\n        myViewModel = ViewModelProviders.of(activity).get(MyViewModel.class);\r\n    }\r\n\r\n    Gson gson = new Gson();\r\n\r\n    private MyViewModel myViewModel;\r\n    private WebRtcClient webRtcClient = new WebRtcClient();\r\n    private static final String TAG = \"EventHandler\";\r\n\r\n    public void messageHandler(String message) {\r\n        Log.d(TAG, \"messageHandler: Entered messageHandler\");\r\n\r\n        BaseMessageHandler<InitiaeCallMessage> unCoverMessage = gson.fromJson\r\n                (message, new TypeToken<BaseMessageHandler<InitiaeCallMessage>>\r\n                        () {\r\n                }.getType());\r\n\r\n        String messageType = unCoverMessage.getType();\r\n\r\n        MessageType messageTypeEnum = MessageType.valueOf(messageType);\r\n\r\n        switch (messageTypeEnum) {\r\n            case initiateCall:\r\n                \r\n                Log.d(TAG, \"messageHandler: Entering initiateCall\");\r\n                String initiateCallPayload = unCoverMessage.getPayload().getName();\r\n                myViewModel.sendingMessage(initiateCallPayload);\r\n                \r\n                break;\r\n                \r\n            case receiveOffer:\r\n                Log.d(TAG, \"messageHandler: Entering OfferCall\");\r\n                formattingStringToWebRTC(message);\r\n                \r\n\r\n                Log.d(TAG, \"messageHandler: Do we hit?\");\r\n\r\n                    break;\r\n            case acceptCall:\r\n                Log.d(TAG, \"messageHandler: Entering AcceptingCall\");\r\n                break;\r\n            case createRoom:\r\n                Log.d(TAG, \"messageHandler: Entering createRoom\");\r\n                break;\r\n            case dismissCall:\r\n                Log.d(TAG, \"messageHandler: Entering dismissCall\");\r\n                break;\r\n            case joinedRoomParticipant:\r\n                Log.d(TAG, \"messageHandler: Entering joinedRoomParticipant\");\r\n                break;\r\n            default:\r\n                Log.d(TAG, \"messageHandler: Entering default\");\r\n\r\n\r\n        }\r\n    }\r\n    public void formattingStringToWebRTC(String message) {\r\n        Log.d(TAG, \"formattingStringToWebRTC: 1\");\r\n\r\n        BaseMessageHandler<OfferMessage> unCoverForWebRTC = gson.fromJson\r\n                (message, new TypeToken<BaseMessageHandler<OfferMessage>>(){}.getType());\r\n\r\n        Log.d(TAG, \"formattingStringToWebRTC:  \" + unCoverForWebRTC);\r\n        stringPayload = unCoverForWebRTC.getPayload().getSdp();\r\n\r\n        Log.d(TAG, \"formattingStringToWebRTC: \" + stringPayload);\r\n        myViewModel.sendingMessage(stringPayload);\r\n\r\n        Log.d(TAG, \"formattingStringToWebRTC: 2\");\r\n    }\r\n}\r\n\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/example/socketconnectionwebrtc/EventHandler/EventHandler.java	(revision 0d317a02ddd2e477abe890a414f595c24fc31976)
++++ app/src/main/java/com/example/socketconnectionwebrtc/EventHandler/EventHandler.java	(date 1569486351817)
+@@ -30,7 +30,7 @@
+     Gson gson = new Gson();
+ 
+     private MyViewModel myViewModel;
+-    private WebRtcClient webRtcClient = new WebRtcClient();
++
+     private static final String TAG = "EventHandler";
+ 
+     public void messageHandler(String message) {
+Index: app/src/main/java/com/example/socketconnectionwebrtc/WebRtc/WebRtcClient.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.socketconnectionwebrtc.WebRtc;\r\n\r\n\r\nimport android.util.JsonReader;\r\nimport android.util.Log;\r\n\r\nimport com.example.socketconnectionwebrtc.BootStrap.MainActivity;\r\nimport com.example.socketconnectionwebrtc.Model.BaseMessageHandler;\r\nimport com.example.socketconnectionwebrtc.Model.OfferMessage;\r\nimport com.google.gson.Gson;\r\nimport com.google.gson.GsonBuilder;\r\nimport com.google.gson.JsonElement;\r\nimport com.google.gson.JsonObject;\r\nimport com.google.gson.JsonParser;\r\n\r\nimport org.json.JSONException;\r\nimport org.json.JSONObject;\r\nimport org.webrtc.DataChannel;\r\nimport org.webrtc.IceCandidate;\r\nimport org.webrtc.MediaConstraints;\r\nimport org.webrtc.MediaStream;\r\nimport org.webrtc.PeerConnection;\r\nimport org.webrtc.PeerConnectionFactory;\r\nimport org.webrtc.SdpObserver;\r\nimport org.webrtc.SessionDescription;\r\n\r\nimport java.io.StringReader;\r\nimport java.util.ArrayList;\r\nimport java.util.Collection;\r\nimport java.util.Collections;\r\nimport java.util.HashMap;\r\nimport java.util.LinkedList;\r\nimport java.util.List;\r\n\r\nimport javax.microedition.khronos.egl.EGLContext;\r\n\r\n\r\npublic class WebRtcClient {\r\n    private static final String TAG = \"WebRtcClient\";\r\n    private MediaConstraints pcConstraints = new MediaConstraints();\r\n    private HashMap<String, Peer> peers = new HashMap<>();\r\n    private final static int MAX_PEER = 2;\r\n    private MainActivity mainActivity;\r\n    private PeerConnectionParameters pcParams;\r\n    private boolean[] endPoints = new boolean[MAX_PEER];\r\n    private LinkedList<PeerConnection.IceServer> iceServers = new LinkedList<>();\r\n    private PeerConnectionFactory factory;\r\n\r\n    private MediaStream localMS;\r\n    private static String HOST_DOMAIN = \"firstlineconnect.com\";\r\n    private static String SignalingServerHost = \"wss://:1338\";\r\n    private RtcListener rtcListener;\r\n    private MessageHandler messageHandler;\r\n\r\n\r\n\r\n    public interface RtcListener {\r\n        void onCallReady(String callId);\r\n\r\n        void onStatusChanged(String newStatus);\r\n\r\n        void onLocalStream(MediaStream localStream);\r\n\r\n        void onAddRemoteStream(MediaStream remoteStream, int endPoint);\r\n\r\n        void onRemoveRemoteStream(int endPoint);\r\n    }\r\n\r\n    private interface Command {\r\n        void execute(String peerid, String jsonPayload) throws JSONException;\r\n    }\r\n\r\n    /*\r\n    private class createOffcerCommand implements Command {\r\n\r\n        @Override\r\n        public void execute(String peerId, JsonObject jsonPayload) throws JSONException {\r\n            Log.d(TAG, \"execute: Entered createOfferCommand\");\r\n            Peer peer = peers.get(peerId);\r\n            peer.pc.createOffer(peer, pcConstraints);\r\n        }\r\n    }\r\n*/\r\n    private class CreateAnswerCommand implements Command {\r\n\r\n        @Override\r\n        public void execute(String peerid, String jsonPayload) throws JSONException {\r\n            Peer peer = peers.get(peerid);\r\n            SessionDescription sdp = new SessionDescription(\r\n                    SessionDescription.Type.fromCanonicalForm(\"offer\"), jsonPayload);\r\n\r\n            peer.pc.createAnswer(peer, pcConstraints);\r\n            peer.pc.setRemoteDescription(peer, sdp);\r\n        }\r\n    }\r\n\r\n    /*\r\n        private class SetRemoteSDPCommand implements Command {\r\n\r\n            @Override\r\n            public void execute(String peerId, JsonObject jsonPayload) throws JSONException {\r\n                Peer peer = peers.get(peerId);\r\n                SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm(jsonPayload.getAsString(\"type\")),\r\n                        jsonPayload.get(\"sdp\"));\r\n\r\n                peer.pc.setRemoteDescription(peer, sdp);\r\n            }\r\n        }\r\n\r\n        private class AddIceCandidate implements Command {\r\n\r\n            @Override\r\n            public void execute(String peerId, JsonObject jsonPayload) throws JSONException {\r\n                PeerConnection pc = peers.get(peerId).pc;\r\n                if (pc.getRemoteDescription() != null) {\r\n                    IceCandidate candidate = new IceCandidate(\r\n                            jsonPayload.getString(\"id\"),\r\n                            jsonPayload.getInt(\"label\"),\r\n                            jsonPayload.getString(\"candidate\")\r\n                    );\r\n                    pc.addIceCandidate(candidate);\r\n                }\r\n            }\r\n        }\r\n   */\r\n    public void sendMessage(String to, String type, JSONObject payload) throws JSONException {\r\n        JSONObject message = new JSONObject();\r\n        message.put(\"to\", to);\r\n        message.put(\"type\", type);\r\n        message.put(\"payload\", payload);\r\n        // socketConnectionHandler.sendMessageToSocket(\"eventMessage\", message);\r\n    }\r\n\r\n    private class Peer implements SdpObserver, PeerConnection.Observer {\r\n        private PeerConnection pc;\r\n        private String id;\r\n        private int endPoint;\r\n\r\n        public Peer(String id, int endPoint) {\r\n\r\n            Log.d(TAG, \"Peer: \" + this);\r\n            this.pc = factory.createPeerConnection(iceServers, pcConstraints, this);\r\n            this.id = id;\r\n            this.endPoint = endPoint;\r\n\r\n\r\n            pc.addStream(localMS);\r\n\r\n            rtcListener.onStatusChanged(\"CONNECTING\");\r\n        }\r\n\r\n\r\n        @Override\r\n        public void onCreateSuccess(SessionDescription sessionDescription) {\r\n            try {\r\n                JSONObject payload = new JSONObject();\r\n                payload.put(\"type\", sessionDescription.type.canonicalForm());\r\n                payload.put(\"sdp\", sessionDescription.description);\r\n                //TODO Get this to the main activity -> websocket\r\n                sendMessage(id, sessionDescription.type.canonicalForm(), payload);\r\n                pc.setLocalDescription(Peer.this, sessionDescription);\r\n            } catch (JSONException e) {\r\n                e.printStackTrace();\r\n            }\r\n\r\n        }\r\n\r\n\r\n        @Override\r\n        public void onSetSuccess() {\r\n\r\n        }\r\n\r\n        @Override\r\n        public void onCreateFailure(String s) {\r\n\r\n        }\r\n\r\n        @Override\r\n        public void onSetFailure(String s) {\r\n\r\n        }\r\n\r\n        @Override\r\n        public void onSignalingChange(PeerConnection.SignalingState signalingState) {\r\n\r\n        }\r\n\r\n        @Override\r\n        public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {\r\n            if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {\r\n                removePeer(id);\r\n                rtcListener.onStatusChanged(\"DISCONNECED\");\r\n            }\r\n\r\n        }\r\n\r\n        @Override\r\n        public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {\r\n\r\n        }\r\n\r\n        @Override\r\n        public void onIceCandidate(IceCandidate iceCandidate) {\r\n\r\n            try {\r\n                JSONObject payload = new JSONObject();\r\n                payload.put(\"label\", iceCandidate.sdpMLineIndex);\r\n                payload.put(\"id\", iceCandidate.sdpMid);\r\n                payload.put(\"candidate\", iceCandidate.sdp);\r\n                sendMessage(id, \"candidate\", payload);\r\n            } catch (JSONException e) {\r\n                e.printStackTrace();\r\n            }\r\n        }\r\n\r\n        @Override\r\n        public void onAddStream(MediaStream mediaStream) {\r\n            Log.d(TAG, \"onAddStream: inside onAddStream\");\r\n            rtcListener.onAddRemoteStream(mediaStream, endPoint + 1);\r\n        }\r\n\r\n        @Override\r\n        public void onRemoveStream(MediaStream mediaStream) {\r\n            Log.d(TAG, \"onRemoveStream: Inside Remove Stream\");\r\n            removePeer(id);\r\n        }\r\n\r\n        @Override\r\n        public void onDataChannel(DataChannel dataChannel) {\r\n\r\n        }\r\n\r\n        @Override\r\n        public void onRenegotiationNeeded() {\r\n\r\n        }\r\n\r\n\r\n        private Peer addPeer(String id, int endPoint) {\r\n            Peer peer = new Peer(id, endPoint);\r\n            peers.put(id, peer);\r\n\r\n            endPoints[endPoint] = true;\r\n\r\n\r\n            return peer;\r\n        }\r\n\r\n        private void removePeer(String id) {\r\n            Peer peer = peers.get(id);\r\n            rtcListener.onRemoveRemoteStream(peer.endPoint);\r\n\r\n            peer.pc.close();\r\n\r\n            peers.remove(peer.id);\r\n\r\n            endPoints[peer.endPoint] = false;\r\n        }\r\n\r\n\r\n        public void WebRtcClienten(RtcListener listener, String host, PeerConnectionParameters params, EGLContext eglContext) {\r\n\r\n            rtcListener = listener;\r\n            pcParams = params;\r\n\r\n            PeerConnectionFactory.initializeAndroidGlobals(listener, true, true, params.videoCodecHwAcceleration, eglContext);\r\n            factory = new PeerConnectionFactory();\r\n\r\n\r\n            PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();\r\n\r\n\r\n            options.networkIgnoreMask = 0;\r\n\r\n\r\n            /*\r\n\r\n            PeerConnection.IceServer stun = PeerConnection.IceServer.builder(\"stun:(firstlineconnect.com)\").createIceServer();\r\n            PeerConnection.IceServer turn = PeerConnection.IceServer.builder(\"turn:(firstlineconnect.com\").setUsername(\"u\").setPassword(\"p\").createIceServer();\r\n\r\n            iceServers.add(stun);\r\n            iceServers.add(turn);\r\n\r\n            */\r\n\r\n            iceServers.add(new PeerConnection.IceServer(\"stun:firstlineconnect.com\"));\r\n            iceServers.add(new PeerConnection.IceServer(\"turn:firstlineconnect.com\"));\r\n\r\n            pcConstraints.mandatory.add(new MediaConstraints.KeyValuePair(\"OfferToReceiveAudio\", \"true\"));\r\n            pcConstraints.mandatory.add(new MediaConstraints.KeyValuePair(\"OfferToReceiveVideo\", \"true\"));\r\n            pcConstraints.optional.add(new MediaConstraints.KeyValuePair(\"DtlsSrtpKeyAgreement\", \"true\"));\r\n\r\n\r\n        }\r\n\r\n    }\r\n        /*\r\n        MediaConstraints constraints = new MediaConstraints();\r\n        PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();\r\n        PeerConnectionFactory peerConnectionFactory = PeerConnectionFactory.builder().createPeerConnectionFactory(iceServers, constraints);\r\n*/\r\n        /*\r\n        final PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();\r\n        PeerConnectionFactory factory = new PeerConnectionFactory(new PeerConnectionFactory.Options());\r\n        MediaConstraints constraints = new MediaConstraints();\r\n        PeerConnection peerConnection = factory.createPeerConnection(iceServers, constraints, new YourPeerConnectionObserver());\r\n*/\r\n    // SessionDescription receivedSDP; //decode this from the received offer\r\n\r\n    //peerConnection.setRemoteDescription(this, receivedSDP);\r\n\r\n    private void createLocalPeerConnection(MediaConstraints sdpConstraints) {\r\n\r\n        final List<PeerConnection.IceServer> iceServers = new ArrayList<>();\r\n\r\n        PeerConnection.IceServer iceServer = new PeerConnection.IceServer(HOST_DOMAIN);\r\n        iceServers.add(iceServer);\r\n\r\n        //localPeer = peerConnectionFactory.createPeerConnection(iceServers, sdpConstraints )\r\n\r\n\r\n    }\r\n\r\n    /*\r\n    //TODO See if we capture frame from main\r\n    public didCaptureFrame(Frame data) {\r\n\r\n    }\r\n    */\r\n\r\n    public void start(String name) {\r\n\r\n        try {\r\n            JSONObject message = new JSONObject();\r\n            message.put(\"name\", name);\r\n            // socketConnectionHandler.sendMessageToSocket(\"ReadyToStream\", message);\r\n        } catch (JSONException e) {\r\n            e.printStackTrace();\r\n        }\r\n    }\r\n\r\n    private class MessageHandler {\r\n        private HashMap<String, Command> commandMap;\r\n\r\n        private MessageHandler() {\r\n            this.commandMap = new HashMap<>();\r\n            //commandMap.put(\"init\", new createOffcerCommand());\r\n            commandMap.put(\"offer\", new CreateAnswerCommand());\r\n            //commandMap.put(\"answer\", new SetRemoteSDPCommand());\r\n            //commandMap.put(\"candidate\", new AddIceCandidate());\r\n\r\n            //Log.d(TAG, \"mapPayloadToSession: Rammer vi?\" + payloadMessage);\r\n        }\r\n    }\r\n\r\n    //TODO Make this called from main\r\n\r\n    public void mapPayloadToSession(String payloadMessage) throws JSONException {\r\n        Gson gson = new Gson();\r\n\r\n        OfferMessage offer = new OfferMessage(payloadMessage, \"offer\");\r\n        Log.d(TAG, \"mapPayloadToSession: Rammer vi? \" + payloadMessage);\r\n        CreateAnswerCommand createAnswerCommand = new CreateAnswerCommand();\r\n\r\n\r\n\r\n\r\n        String JsonString = gson.toJson(payloadMessage);\r\n        Log.d(TAG, \"mapPayloadToSession: \" + JsonString);\r\n\r\n        String passingJsonString = gson.toJson(payloadMessage);\r\n\r\n        createAnswerCommand.execute(\"1\",  gson.toJson(offer));\r\n\r\n    }\r\n}\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/example/socketconnectionwebrtc/WebRtc/WebRtcClient.java	(revision 0d317a02ddd2e477abe890a414f595c24fc31976)
++++ app/src/main/java/com/example/socketconnectionwebrtc/WebRtc/WebRtcClient.java	(date 1569500910992)
+@@ -1,18 +1,10 @@
+ package com.example.socketconnectionwebrtc.WebRtc;
+ 
+ 
+-import android.util.JsonReader;
+ import android.util.Log;
+-
+ import com.example.socketconnectionwebrtc.BootStrap.MainActivity;
+-import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
+-import com.example.socketconnectionwebrtc.Model.OfferMessage;
+ import com.google.gson.Gson;
+-import com.google.gson.GsonBuilder;
+-import com.google.gson.JsonElement;
+ import com.google.gson.JsonObject;
+-import com.google.gson.JsonParser;
+-
+ import org.json.JSONException;
+ import org.json.JSONObject;
+ import org.webrtc.DataChannel;
+@@ -23,17 +15,11 @@
+ import org.webrtc.PeerConnectionFactory;
+ import org.webrtc.SdpObserver;
+ import org.webrtc.SessionDescription;
+-
+-import java.io.StringReader;
+ import java.util.ArrayList;
+-import java.util.Collection;
+-import java.util.Collections;
+ import java.util.HashMap;
+ import java.util.LinkedList;
+ import java.util.List;
+ 
+-import javax.microedition.khronos.egl.EGLContext;
+-
+ 
+ public class WebRtcClient {
+     private static final String TAG = "WebRtcClient";
+@@ -49,10 +35,88 @@
+     private MediaStream localMS;
+     private static String HOST_DOMAIN = "firstlineconnect.com";
+     private static String SignalingServerHost = "wss://:1338";
+-    private RtcListener rtcListener;
++    private RtcListener mListener;
+     private MessageHandler messageHandler;
++    private Peer peer;
++
++    public WebRtcClient(RtcListener rtcListener, String newName, PeerConnectionParameters params, android.opengl.EGLContext eglContext) {
++        Log.d(TAG, "WebRtcClient: Hitting Constructor");
++        mListener = rtcListener;
++        pcParams = params;
+ 
++        PeerConnectionFactory.initializeAndroidGlobals(rtcListener, true, true, params.videoCodecHwAcceleration, eglContext);
++        factory = new PeerConnectionFactory();
++        PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
+ 
++        MessageHandler messageHandler = new MessageHandler();
++
++
++            /*
++
++            PeerConnection.IceServer stun = PeerConnection.IceServer.builder("stun:(firstlineconnect.com)").createIceServer();
++            PeerConnection.IceServer turn = PeerConnection.IceServer.builder("turn:(firstlineconnect.com").setUsername("u").setPassword("p").createIceServer();
++
++            iceServers.add(stun);
++            iceServers.add(turn);
++
++            */
++
++        iceServers.add(new PeerConnection.IceServer("stun:firstlineconnect.com"));
++        iceServers.add(new PeerConnection.IceServer("turn:firstlineconnect.com"));
++
++        pcConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
++        pcConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"));
++        pcConstraints.optional.add(new MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"));
++
++        messageHandler.Listener(newName);
++        Log.d(TAG, "WebRtcClient: Finishing the Constructor as well");
++    }
++
++    private class MessageHandler {
++        private HashMap<String, Command> commandMap;
++        Gson gson = new Gson();
++        Peer peer;
++        private MessageHandler() {
++            this.commandMap = new HashMap<>();
++            //commandMap.put("init", new createOffcerCommand());
++            commandMap.put("offer", new CreateAnswerCommand());
++            //commandMap.put("answer", new SetRemoteSDPCommand());
++            //commandMap.put("candidate", new AddIceCandidate());
++
++            //Log.d(TAG, "mapPayloadToSession: Rammer vi?" + payloadMessage);
++        }
++
++        private void Listener(String json) {
++            String dataSdp = gson.toJson(json);
++            try {
++                Log.d(TAG, "Listener: Rammer vi?");
++                String from = String.valueOf(dataSdp.contains("from"));
++                String type = String.valueOf(dataSdp.contains("type"));
++                JsonObject payload = null;
++                if (!peers.containsKey(type)) {
++                    int endPoint = findEndPoint();
++                    if (endPoint != MAX_PEER) {
++                        Peer peer = addPeer(type, endPoint);
++                        peer.pc.addStream(localMS);
++                        commandMap.get(type).execute(from, payload);
++                    } else {
++                        commandMap.get(type).execute(from, payload);
++                    }
++                }
++
++            } catch (Exception e) {
++                Log.d(TAG, "Listener: " + e);
++            }
++
++
++        }
++
++    }
++
++    private int findEndPoint() {
++        for (int i = 0; i < MAX_PEER; i++) if (!endPoints[i]) return i;
++        return MAX_PEER;
++    }
+ 
+     public interface RtcListener {
+         void onCallReady(String callId);
+@@ -67,7 +131,7 @@
+     }
+ 
+     private interface Command {
+-        void execute(String peerid, String jsonPayload) throws JSONException;
++        void execute(String peerid, JsonObject jsonPayload) throws JSONException;
+     }
+ 
+     /*
+@@ -84,13 +148,13 @@
+     private class CreateAnswerCommand implements Command {
+ 
+         @Override
+-        public void execute(String peerid, String jsonPayload) throws JSONException {
+-            Peer peer = peers.get(peerid);
+-            SessionDescription sdp = new SessionDescription(
+-                    SessionDescription.Type.fromCanonicalForm("offer"), jsonPayload);
++        public void execute(String peerid, JsonObject jsonPayload) {
++
+ 
++            //SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm("offer"), jsonPayload);
++
++            //peer.pc.setRemoteDescription(peer, sdp);
+             peer.pc.createAnswer(peer, pcConstraints);
+-            peer.pc.setRemoteDescription(peer, sdp);
+         }
+     }
+ 
+@@ -136,19 +200,6 @@
+         private String id;
+         private int endPoint;
+ 
+-        public Peer(String id, int endPoint) {
+-
+-            Log.d(TAG, "Peer: " + this);
+-            this.pc = factory.createPeerConnection(iceServers, pcConstraints, this);
+-            this.id = id;
+-            this.endPoint = endPoint;
+-
+-
+-            pc.addStream(localMS);
+-
+-            rtcListener.onStatusChanged("CONNECTING");
+-        }
+-
+ 
+         @Override
+         public void onCreateSuccess(SessionDescription sessionDescription) {
+@@ -190,7 +241,7 @@
+         public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
+             if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
+                 removePeer(id);
+-                rtcListener.onStatusChanged("DISCONNECED");
++                mListener.onStatusChanged("DISCONNECED");
+             }
+ 
+         }
+@@ -217,7 +268,7 @@
+         @Override
+         public void onAddStream(MediaStream mediaStream) {
+             Log.d(TAG, "onAddStream: inside onAddStream");
+-            rtcListener.onAddRemoteStream(mediaStream, endPoint + 1);
++            mListener.onAddRemoteStream(mediaStream, endPoint + 1);
+         }
+ 
+         @Override
+@@ -236,65 +287,42 @@
+ 
+         }
+ 
++        public Peer(String id, int endPoint) {
++            this.pc = factory.createPeerConnection(iceServers, pcConstraints, this);
++            this.id = id;
++            this.endPoint = endPoint;
++
++
++            pc.addStream(localMS);
++
++            mListener.onStatusChanged("CONNECTING");
++        }
++    }
+ 
+         private Peer addPeer(String id, int endPoint) {
++            Log.d(TAG, "addPeer: Hallo?");
+             Peer peer = new Peer(id, endPoint);
+             peers.put(id, peer);
+ 
+             endPoints[endPoint] = true;
+-
+-
+             return peer;
+         }
+ 
++
++
+         private void removePeer(String id) {
+-            Peer peer = peers.get(id);
+-            rtcListener.onRemoveRemoteStream(peer.endPoint);
++            //  Peer peer = peers.get(id);
++            mListener.onRemoveRemoteStream(peer.endPoint);
+ 
+             peer.pc.close();
+ 
+-            peers.remove(peer.id);
++            //       peers.remove(peer.id);
+ 
+             endPoints[peer.endPoint] = false;
+         }
+ 
+ 
+-        public void WebRtcClienten(RtcListener listener, String host, PeerConnectionParameters params, EGLContext eglContext) {
+-
+-            rtcListener = listener;
+-            pcParams = params;
+-
+-            PeerConnectionFactory.initializeAndroidGlobals(listener, true, true, params.videoCodecHwAcceleration, eglContext);
+-            factory = new PeerConnectionFactory();
+-
+-
+-            PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
+-
+-
+-            options.networkIgnoreMask = 0;
+-
+ 
+-            /*
+-
+-            PeerConnection.IceServer stun = PeerConnection.IceServer.builder("stun:(firstlineconnect.com)").createIceServer();
+-            PeerConnection.IceServer turn = PeerConnection.IceServer.builder("turn:(firstlineconnect.com").setUsername("u").setPassword("p").createIceServer();
+-
+-            iceServers.add(stun);
+-            iceServers.add(turn);
+-
+-            */
+-
+-            iceServers.add(new PeerConnection.IceServer("stun:firstlineconnect.com"));
+-            iceServers.add(new PeerConnection.IceServer("turn:firstlineconnect.com"));
+-
+-            pcConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
+-            pcConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"));
+-            pcConstraints.optional.add(new MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"));
+-
+-
+-        }
+-
+-    }
+         /*
+         MediaConstraints constraints = new MediaConstraints();
+         PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
+@@ -340,39 +368,27 @@
+         }
+     }
+ 
+-    private class MessageHandler {
+-        private HashMap<String, Command> commandMap;
+-
+-        private MessageHandler() {
+-            this.commandMap = new HashMap<>();
+-            //commandMap.put("init", new createOffcerCommand());
+-            commandMap.put("offer", new CreateAnswerCommand());
+-            //commandMap.put("answer", new SetRemoteSDPCommand());
+-            //commandMap.put("candidate", new AddIceCandidate());
+-
+-            //Log.d(TAG, "mapPayloadToSession: Rammer vi?" + payloadMessage);
+-        }
+-    }
+ 
+     //TODO Make this called from main
+-
++/*
+     public void mapPayloadToSession(String payloadMessage) throws JSONException {
++
+         Gson gson = new Gson();
+ 
+         OfferMessage offer = new OfferMessage(payloadMessage, "offer");
++
+         Log.d(TAG, "mapPayloadToSession: Rammer vi? " + payloadMessage);
++
+         CreateAnswerCommand createAnswerCommand = new CreateAnswerCommand();
+ 
+-
+-
+-
+         String JsonString = gson.toJson(payloadMessage);
++
+         Log.d(TAG, "mapPayloadToSession: " + JsonString);
+ 
+-        String passingJsonString = gson.toJson(payloadMessage);
+-
+-        createAnswerCommand.execute("1",  gson.toJson(offer));
++        createAnswerCommand.execute("1", gson.toJson(offer));
+ 
+     }
++
++ */
+ }
+ 
+Index: app/src/main/java/com/example/socketconnectionwebrtc/BootStrap/MainActivity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.socketconnectionwebrtc.BootStrap;\r\n\r\nimport android.content.DialogInterface;\r\nimport android.content.pm.PackageManager;\r\nimport android.os.Bundle;\r\nimport android.util.Log;\r\nimport android.util.Rational;\r\nimport android.view.Surface;\r\nimport android.view.TextureView;\r\n\r\nimport androidx.annotation.NonNull;\r\nimport androidx.appcompat.app.AlertDialog;\r\nimport androidx.appcompat.app.AppCompatActivity;\r\nimport androidx.camera.core.CameraX;\r\nimport androidx.camera.core.ImageCapture;\r\nimport androidx.camera.core.ImageCaptureConfig;\r\nimport androidx.camera.core.Preview;\r\nimport androidx.camera.core.PreviewConfig;\r\nimport androidx.core.content.ContextCompat;\r\nimport androidx.lifecycle.Observer;\r\nimport androidx.lifecycle.ViewModelProviders;\r\nimport androidx.recyclerview.widget.LinearLayoutManager;\r\nimport androidx.recyclerview.widget.RecyclerView;\r\n\r\nimport com.example.socketconnectionwebrtc.Enum.MessageType;\r\nimport com.example.socketconnectionwebrtc.Model.BaseMessage;\r\nimport com.example.socketconnectionwebrtc.Model.RoomDetails;\r\nimport com.example.socketconnectionwebrtc.R;\r\n//import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;\r\n//import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;\r\nimport com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;\r\nimport com.example.socketconnectionwebrtc.WebRtc.WebRtcClient;\r\nimport com.google.firebase.auth.FirebaseAuth;\r\n\r\nimport android.util.Size;\r\nimport android.graphics.Matrix;\r\nimport android.view.ViewGroup;\r\nimport android.widget.Toast;\r\n\r\nimport org.json.JSONException;\r\n\r\nimport java.io.IOException;\r\n\r\n//import okhttp3.WebSocket;\r\n\r\n\r\npublic class MainActivity extends AppCompatActivity {\r\n    private int REQUEST_CODE_PERMISSION = 10;\r\n    private final String[] REQUIRED_PERMISSIONS = new String[]{\"android.permission.CAMERA\"};\r\n    private static final String TAG = \"MainActivity\";\r\n    private FirebaseAuth auth;\r\n    private MyViewModel myViewModel;\r\n    private SocketConnectionHandler socketConnectionHandler;\r\n    private String getPayload;\r\n    private TextureView textureView;\r\n    private WebRtcClient webRtcClient = new WebRtcClient();\r\n\r\n    @Override\r\n    protected void onCreate(Bundle savedInstanceState) {\r\n        super.onCreate(savedInstanceState);\r\n        setContentView(R.layout.activity_main);\r\n\r\n        Log.d(TAG, \"onCreate: Andrei\");\r\n        myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);\r\n        /*\r\n        myViewModel.eventMessage.observe(this, eventMessage -> {\r\n            Log.d(TAG, \"onCreate: Working\");\r\n            // update UI\r\n        });\r\n\r\n         */\r\n\r\n\r\n        // Create the observer which updates the UI.\r\n        //TODO SPLIT DIALOG OG WEBRTC PAYLOAD\r\n        final Observer<String> nameObserver = newName -> {\r\n            Log.d(TAG, \"onCreate: DET ALTSÅ HER\");\r\n            if (newName.length() > 50) {\r\n                try {\r\n                    webRtcClient.mapPayloadToSession(newName);\r\n                } catch (JSONException e) {\r\n                    e.printStackTrace();\r\n                }\r\n            } else {\r\n                Log.d(TAG, \"onCreate: HVAD ER NEWNAME\" + newName);\r\n                //TODO FIX DIALOG SÅ HVERGANG MAN KLIKKER IKKE SPAMMER DET SAMME\r\n                dialog(newName);\r\n            }\r\n        };\r\n\r\n\r\n        // Observe the LiveData, passing in this activity as the LifecycleOwner and the observer.\r\n        myViewModel.getEventMessage().observe(this, nameObserver);\r\n\r\n\r\n        //okHttpSocketConnection.connect();\r\n\r\n\r\n        try {\r\n            socketConnectionHandler = new SocketConnectionHandler(this);\r\n        } catch (IOException e) {\r\n            e.printStackTrace();\r\n        }\r\n\r\n\r\n        RecyclerView recyclerView = findViewById(R.id.textViewRecycleerView);\r\n        recyclerView.setLayoutManager(new LinearLayoutManager(this));\r\n        recyclerView.setHasFixedSize(true);\r\n\r\n\r\n        final Adapter adapter = new Adapter();\r\n        recyclerView.setAdapter(adapter);\r\n\r\n\r\n        auth = FirebaseAuth.getInstance();\r\n        textureView = findViewById(R.id.view_finder1);\r\n\r\n\r\n        ConnectToSocket();\r\n\r\n\r\n        try {\r\n            startCamera();\r\n        } catch (Exception e) {\r\n            Log.d(TAG, \"onCreate: \" + e);\r\n        }\r\n\r\n    }\r\n\r\n    private void dialog(String payload) {\r\n        //Bundle data = getIntent().getExtras();\r\n\r\n        //  String eventHandlerMessage = data.getString(\"eventHandlerValues\");\r\n\r\n\r\n        // Update the UI, in this case, a TextView.\r\n        //BaseMessageHandler base = new BaseMessageHandler();\r\n\r\n//        getPayload = base.getPayload().toString();\r\n        Log.d(TAG, \"onCreate: Working\");\r\n\r\n        new AlertDialog.Builder(this)\r\n                .setTitle(\"InitiateCall\")\r\n                .setMessage(payload)\r\n                .setNegativeButton(\"No\", new DialogInterface.OnClickListener() {\r\n                    @Override\r\n                    public void onClick(DialogInterface dialogInterface, int i) {\r\n                        Log.d(TAG, \"onClick: Dialog on click No\");\r\n                        socketConnectionHandler.sendMessageToSocket(new BaseMessage(MessageType.rejectCall, new RoomDetails(\"+4529933087\", \"Steffen\")));\r\n                    }\r\n                })\r\n                .setPositiveButton(\"Ok\", new DialogInterface.OnClickListener() {\r\n                    @Override\r\n                    public void onClick(DialogInterface dialogInterface, int i) {\r\n                        Log.d(TAG, \"onClick: Dialog On Click Yes\");\r\n\r\n                        socketConnectionHandler.sendMessageToSocket(new BaseMessage(MessageType.acceptCall, new RoomDetails(\"+4529933087\", \"Steffen\")));\r\n                    }\r\n\r\n                }).show();\r\n    }\r\n\r\n    public void startCamera() {\r\n        Log.d(TAG, \"startCamera: Inside StartCamera\");\r\n        CameraX.unbindAll();\r\n\r\n\r\n        //Starting Preview\r\n        int RatioW = textureView.getWidth();\r\n        int RatioH = textureView.getHeight();\r\n        Rational ratio = new Rational(RatioW, RatioH);\r\n        Size screen = new Size(RatioW, RatioH);\r\n\r\n\r\n        //Config Obj for Preview/ViewFinder\r\n        PreviewConfig pConfig = new PreviewConfig.Builder().setTargetAspectRatio(ratio).setTargetResolution(screen).build();\r\n        Preview preview = new Preview(pConfig);\r\n\r\n        preview.setOnPreviewOutputUpdateListener(new Preview.OnPreviewOutputUpdateListener() {\r\n            @Override\r\n            public void onUpdated(Preview.PreviewOutput output) {\r\n                ViewGroup parent = (ViewGroup) textureView.getParent();\r\n                parent.removeView(textureView);\r\n                parent.addView(textureView, 0);\r\n\r\n\r\n                textureView.setSurfaceTexture(output.getSurfaceTexture());\r\n                updateTransform();\r\n            }\r\n        });\r\n        ImageCaptureConfig imgCapConfig = new ImageCaptureConfig.Builder().setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY)\r\n                .setTargetRotation(getWindowManager().getDefaultDisplay().getRotation()).build();\r\n        final ImageCapture imgCap = new ImageCapture(imgCapConfig);\r\n\r\n\r\n        CameraX.bindToLifecycle(this, imgCap, preview);\r\n        Log.d(TAG, \"startCamera: CameraStarted\");\r\n\r\n    }\r\n\r\n    private void updateTransform() {\r\n\r\n        Matrix mx = new Matrix();\r\n        float w = textureView.getMeasuredWidth();\r\n        float h = textureView.getMeasuredHeight();\r\n\r\n        float cx = w / 2f;\r\n        float cy = h / 2f;\r\n\r\n        int rotationDgr;\r\n        int rotation = (int) textureView.getRotation();\r\n\r\n\r\n        switch (rotation) {\r\n            case Surface\r\n                    .ROTATION_0:\r\n                rotationDgr = 0;\r\n                break;\r\n            case Surface\r\n                    .ROTATION_90:\r\n                rotationDgr = 90;\r\n                break;\r\n            case Surface.ROTATION_180:\r\n                rotationDgr = 180;\r\n                break;\r\n            case Surface.ROTATION_270:\r\n                rotationDgr = 270;\r\n                break;\r\n            default:\r\n                return;\r\n        }\r\n        mx.postRotate((float) rotationDgr, cx, cy);\r\n        textureView.setTransform(mx);\r\n    }\r\n\r\n\r\n    public void ConnectToSocket() {\r\n        try {\r\n            Log.d(TAG, \"ConnectToSocket: Tryinger\");\r\n            socketConnectionHandler.socketConnect();\r\n            Log.d(TAG, \"ConnectToSocket: JAJAJ\");\r\n        } catch (Exception e) {\r\n            System.out.println(e);\r\n        }\r\n    }\r\n\r\n    @Override\r\n    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {\r\n\r\n        if (requestCode == REQUEST_CODE_PERMISSION) {\r\n            if (allPermissionsGranted()) {\r\n                startCamera();\r\n                Log.d(TAG, \"onRequestPermissionsResult: Started Camera\");\r\n            } else {\r\n                Toast.makeText(MainActivity.this, \"Permission No Granted\", Toast.LENGTH_SHORT).show();\r\n                finish();\r\n            }\r\n        }\r\n    }\r\n\r\n    private boolean allPermissionsGranted() {\r\n        for (String permission : REQUIRED_PERMISSIONS) {\r\n            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {\r\n                return false;\r\n            }\r\n        }\r\n        return true;\r\n    }\r\n\r\n    public void notifierInfinitiCall() {\r\n        Log.d(TAG, \"DialogStarterBox: DialogStarter\");\r\n        AlertDialog.Builder alertDialogBox = new AlertDialog.Builder(MainActivity.this);\r\n        alertDialogBox.setMessage(\"Steffen\");\r\n        alertDialogBox.setPositiveButton(\"OK\", new DialogInterface.OnClickListener() {\r\n            @Override\r\n            public void onClick(DialogInterface dialogInterface, int i) {\r\n                Log.d(TAG, \"onClick: Fair\");\r\n            }\r\n        });\r\n        alertDialogBox.setNegativeButton(\"No\", new DialogInterface.OnClickListener() {\r\n            @Override\r\n            public void onClick(DialogInterface dialogInterface, int i) {\r\n                MainActivity.this.finish();\r\n            }\r\n        });\r\n        alertDialogBox.setCancelable(false);\r\n        AlertDialog finalDialog = alertDialogBox.create();\r\n        finalDialog.show();\r\n    }\r\n/*\r\n    @Override\r\n    public void onStart() {\r\n        super.onStart();\r\n        // Check if user is signed in (non-null) and update UI accordingly.\r\n        FirebaseUser currentUser = auth.getCurrentUser();\r\n        updateUI(currentUser);\r\n    }\r\n\r\n    private void updateUI(FirebaseUser currentUser) {\r\n        if(currentUser != null){\r\n            Toast.makeText(this, \"Signed in Success full\", Toast.LENGTH_SHORT).show();\r\n        }\r\n        else {\r\n            Intent intent = new Intent(MainActivity.this, LoginManager.class);\r\n            startActivity(intent);\r\n        }\r\n    }\r\n\r\n */\r\n}\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/example/socketconnectionwebrtc/BootStrap/MainActivity.java	(revision 0d317a02ddd2e477abe890a414f595c24fc31976)
++++ app/src/main/java/com/example/socketconnectionwebrtc/BootStrap/MainActivity.java	(date 1569495477164)
+@@ -2,6 +2,7 @@
+ 
+ import android.content.DialogInterface;
+ import android.content.pm.PackageManager;
++import android.graphics.Point;
+ import android.os.Bundle;
+ import android.util.Log;
+ import android.util.Rational;
+@@ -29,6 +30,7 @@
+ //import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;
+ //import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;
+ import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
++import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionParameters;
+ import com.example.socketconnectionwebrtc.WebRtc.WebRtcClient;
+ import com.google.firebase.auth.FirebaseAuth;
+ 
+@@ -38,13 +40,18 @@
+ import android.widget.Toast;
+ 
+ import org.json.JSONException;
++import org.webrtc.MediaStream;
++import org.webrtc.VideoRenderer;
++import org.webrtc.VideoRendererGui;
+ 
+ import java.io.IOException;
+ 
+ //import okhttp3.WebSocket;
+ 
+ 
+-public class MainActivity extends AppCompatActivity {
++public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcListener {
++    private static final String VIDEO_CODEC = "vp9";
++    private static final String AUDIO_CODEC = "opus";
+     private int REQUEST_CODE_PERMISSION = 10;
+     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA"};
+     private static final String TAG = "MainActivity";
+@@ -53,7 +60,8 @@
+     private SocketConnectionHandler socketConnectionHandler;
+     private String getPayload;
+     private TextureView textureView;
+-    private WebRtcClient webRtcClient = new WebRtcClient();
++    private WebRtcClient webRtcClient;
++    private String socketAdress;
+ 
+     @Override
+     protected void onCreate(Bundle savedInstanceState) {
+@@ -62,6 +70,9 @@
+ 
+         Log.d(TAG, "onCreate: Andrei");
+         myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
++
++
++
+         /*
+         myViewModel.eventMessage.observe(this, eventMessage -> {
+             Log.d(TAG, "onCreate: Working");
+@@ -76,11 +87,12 @@
+         final Observer<String> nameObserver = newName -> {
+             Log.d(TAG, "onCreate: DET ALTSÅ HER");
+             if (newName.length() > 50) {
+-                try {
+-                    webRtcClient.mapPayloadToSession(newName);
+-                } catch (JSONException e) {
+-                    e.printStackTrace();
+-                }
++                Point display = new Point();
++                getWindowManager().getDefaultDisplay().getSize(display);
++                PeerConnectionParameters params = new PeerConnectionParameters(true, false, display.x, display.y, 20, 1, VIDEO_CODEC, true, 1, AUDIO_CODEC, true);
++                webRtcClient = new WebRtcClient(this, newName, params, VideoRendererGui.getEGLContext());
++                Log.d(TAG, "onCreate: Does it execute?");
++
+             } else {
+                 Log.d(TAG, "onCreate: HVAD ER NEWNAME" + newName);
+                 //TODO FIX DIALOG SÅ HVERGANG MAN KLIKKER IKKE SPAMMER DET SAMME
+@@ -287,6 +299,31 @@
+         AlertDialog finalDialog = alertDialogBox.create();
+         finalDialog.show();
+     }
++
++    @Override
++    public void onCallReady(String callId) {
++
++    }
++
++    @Override
++    public void onStatusChanged(String newStatus) {
++
++    }
++
++    @Override
++    public void onLocalStream(MediaStream localStream) {
++
++    }
++
++    @Override
++    public void onAddRemoteStream(MediaStream remoteStream, int endPoint) {
++
++    }
++
++    @Override
++    public void onRemoveRemoteStream(int endPoint) {
++
++    }
+ /*
+     @Override
+     public void onStart() {

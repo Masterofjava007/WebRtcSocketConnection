@@ -2,6 +2,7 @@ package com.example.socketconnectionwebrtc.BootStrap;
 
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.graphics.Point;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Rational;
@@ -29,6 +30,7 @@ import com.example.socketconnectionwebrtc.R;
 //import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;
 //import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
+import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionParameters;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcClient;
 import com.google.firebase.auth.FirebaseAuth;
 
@@ -38,13 +40,18 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import org.json.JSONException;
+import org.webrtc.MediaStream;
+import org.webrtc.VideoRenderer;
+import org.webrtc.VideoRendererGui;
 
 import java.io.IOException;
 
 //import okhttp3.WebSocket;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcListener {
+    private static final String VIDEO_CODEC = "vp9";
+    private static final String AUDIO_CODEC = "opus";
     private int REQUEST_CODE_PERMISSION = 10;
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA"};
     private static final String TAG = "MainActivity";
@@ -53,7 +60,8 @@ public class MainActivity extends AppCompatActivity {
     private SocketConnectionHandler socketConnectionHandler;
     private String getPayload;
     private TextureView textureView;
-    private WebRtcClient webRtcClient = new WebRtcClient();
+    private WebRtcClient webRtcClient;
+    private String socketAdress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +70,9 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d(TAG, "onCreate: Andrei");
         myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
+
+
+
         /*
         myViewModel.eventMessage.observe(this, eventMessage -> {
             Log.d(TAG, "onCreate: Working");
@@ -76,11 +87,12 @@ public class MainActivity extends AppCompatActivity {
         final Observer<String> nameObserver = newName -> {
             Log.d(TAG, "onCreate: DET ALTSÅ HER");
             if (newName.length() > 50) {
-                try {
-                    webRtcClient.mapPayloadToSession(newName);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+                Point display = new Point();
+                getWindowManager().getDefaultDisplay().getSize(display);
+                PeerConnectionParameters params = new PeerConnectionParameters(true, false, display.x, display.y, 20, 1, VIDEO_CODEC, true, 1, AUDIO_CODEC, true);
+                webRtcClient = new WebRtcClient(this, newName, params, VideoRendererGui.getEGLContext());
+                Log.d(TAG, "onCreate: Does it execute?");
+
             } else {
                 Log.d(TAG, "onCreate: HVAD ER NEWNAME" + newName);
                 //TODO FIX DIALOG SÅ HVERGANG MAN KLIKKER IKKE SPAMMER DET SAMME
@@ -286,6 +298,31 @@ public class MainActivity extends AppCompatActivity {
         alertDialogBox.setCancelable(false);
         AlertDialog finalDialog = alertDialogBox.create();
         finalDialog.show();
+    }
+
+    @Override
+    public void onCallReady(String callId) {
+
+    }
+
+    @Override
+    public void onStatusChanged(String newStatus) {
+
+    }
+
+    @Override
+    public void onLocalStream(MediaStream localStream) {
+
+    }
+
+    @Override
+    public void onAddRemoteStream(MediaStream remoteStream, int endPoint) {
+
+    }
+
+    @Override
+    public void onRemoveRemoteStream(int endPoint) {
+
     }
 /*
     @Override
