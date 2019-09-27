@@ -1,8 +1,10 @@
 package com.example.socketconnectionwebrtc.BootStrap;
 
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Point;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Rational;
@@ -24,65 +26,59 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.socketconnectionwebrtc.Enum.MessageType;
+import com.example.socketconnectionwebrtc.Login.LoginManager;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
 import com.example.socketconnectionwebrtc.R;
-//import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;
-//import com.example.socketconnectionwebrtc.SocketConnection.OkHttpSocketConnection;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
+import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionClient;
 import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionParameters;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcClient;
+import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import android.util.Size;
 import android.graphics.Matrix;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
-import org.json.JSONException;
+import org.webrtc.IceCandidate;
 import org.webrtc.MediaStream;
-import org.webrtc.VideoRenderer;
+import org.webrtc.SessionDescription;
 import org.webrtc.VideoRendererGui;
 
 import java.io.IOException;
 
-//import okhttp3.WebSocket;
 
-
-public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcListener {
+public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcListener
+        , PeerConnectionClient.PeerConnectionEvents {
     private static final String VIDEO_CODEC = "vp9";
     private static final String AUDIO_CODEC = "opus";
     private int REQUEST_CODE_PERMISSION = 10;
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA"};
     private static final String TAG = "MainActivity";
     private FirebaseAuth auth;
+    private Toast logToast;
     private MyViewModel myViewModel;
     private SocketConnectionHandler socketConnectionHandler;
     private String getPayload;
     private TextureView textureView;
     private WebRtcClient webRtcClient;
     private String socketAdress;
+    private WebRtcInterface.RoomConnectionParameters roomConnectionParameters;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        final Intent intent = getIntent();
         Log.d(TAG, "onCreate: Andrei");
         myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
 
 
 
-        /*
-        myViewModel.eventMessage.observe(this, eventMessage -> {
-            Log.d(TAG, "onCreate: Working");
-            // update UI
-        });
-
-         */
-
-
-        // Create the observer which updates the UI.
         //TODO SPLIT DIALOG OG WEBRTC PAYLOAD
         final Observer<String> nameObserver = newName -> {
             Log.d(TAG, "onCreate: DET ALTSÅ HER");
@@ -103,10 +99,6 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
 
         // Observe the LiveData, passing in this activity as the LifecycleOwner and the observer.
         myViewModel.getEventMessage().observe(this, nameObserver);
-
-
-        //okHttpSocketConnection.connect();
-
 
         try {
             socketConnectionHandler = new SocketConnectionHandler(this);
@@ -136,19 +128,9 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
         } catch (Exception e) {
             Log.d(TAG, "onCreate: " + e);
         }
-
     }
 
     private void dialog(String payload) {
-        //Bundle data = getIntent().getExtras();
-
-        //  String eventHandlerMessage = data.getString("eventHandlerValues");
-
-
-        // Update the UI, in this case, a TextView.
-        //BaseMessageHandler base = new BaseMessageHandler();
-
-//        getPayload = base.getPayload().toString();
         Log.d(TAG, "onCreate: Working");
 
         new AlertDialog.Builder(this)
@@ -324,7 +306,8 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
     public void onRemoveRemoteStream(int endPoint) {
 
     }
-/*
+
+
     @Override
     public void onStart() {
         super.onStart();
@@ -343,7 +326,15 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
         }
     }
 
- */
+    private void logAndToast(String msg) {
+        Log.d(TAG, msg);
+        if (logToast != null) {
+            logToast.cancel();
+        }
+        logToast = Toast.makeText(this, msg, Toast.LENGTH_SHORT);
+        logToast.show();
+    }
+
 }
 
 
