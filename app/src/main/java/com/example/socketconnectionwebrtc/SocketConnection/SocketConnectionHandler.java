@@ -8,7 +8,7 @@ import com.example.socketconnectionwebrtc.EventHandler.EventHandler;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
 import com.example.socketconnectionwebrtc.Enum.MessageType;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
-import com.google.firebase.auth.FirebaseAuth;
+
 import com.google.gson.Gson;
 import com.neovisionaries.ws.client.WebSocket;
 import com.neovisionaries.ws.client.WebSocketAdapter;
@@ -25,7 +25,6 @@ import java.util.Map;
 public class SocketConnectionHandler {
     private static final String TAG = "SocketConnectionHandler";
 
-    private FirebaseAuth auth;
     private AppCompatActivity mActivity;
     EventHandler eventHandler;
     final WebSocket wss;
@@ -107,9 +106,9 @@ public class SocketConnectionHandler {
     }
 
 
-    public void sendMessageToSocket(String message, JSONObject message1) {
+    public void sendMessageToSocket(String message) {
         Log.d(TAG, "sendMessageToSocket: WebRtcClient sending to socket");
-            wss.sendText(message + message1);
+            wss.sendText(message);
 
 
     }

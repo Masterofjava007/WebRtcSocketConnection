@@ -47,21 +47,21 @@ public class EventHandler {
 
         switch (messageTypeEnum) {
             case initiateCall:
-                
+
                 Log.d(TAG, "messageHandler: Entering initiateCall");
                 String initiateCallPayload = unCoverMessage.getPayload().getName();
                 myViewModel.sendingMessage(initiateCallPayload);
-                
+
                 break;
-                
+
             case receiveOffer:
                 Log.d(TAG, "messageHandler: Entering OfferCall");
                 formattingStringToWebRTC(message);
-                
+
 
                 Log.d(TAG, "messageHandler: Do we hit?");
 
-                    break;
+                break;
             case acceptCall:
                 Log.d(TAG, "messageHandler: Entering AcceptingCall");
                 break;
@@ -80,17 +80,18 @@ public class EventHandler {
 
         }
     }
+
     public void formattingStringToWebRTC(String message) {
         Log.d(TAG, "formattingStringToWebRTC: 1");
 
         BaseMessageHandler<OfferMessage> unCoverForWebRTC = gson.fromJson
-                (message, new TypeToken<BaseMessageHandler<OfferMessage>>(){}.getType());
+                (message, new TypeToken<BaseMessageHandler<OfferMessage>>() {
+                }.getType());
 
         Log.d(TAG, "formattingStringToWebRTC:  " + unCoverForWebRTC);
         stringPayload = unCoverForWebRTC.getPayload().getSdp();
-
-        Log.d(TAG, "formattingStringToWebRTC: " + stringPayload);
-        myViewModel.sendingMessage(stringPayload);
+    Log.d(TAG, "formattingStringToWebRTC: " + message);
+        myViewModel.sendingMessage(unCoverForWebRTC.getType() + unCoverForWebRTC.getPayload().getSdp());
 
         Log.d(TAG, "formattingStringToWebRTC: 2");
     }

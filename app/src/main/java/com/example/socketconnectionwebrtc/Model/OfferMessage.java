@@ -7,11 +7,9 @@ import org.webrtc.SessionDescription;
 
 
 public class OfferMessage {
-    @SerializedName("sdp")
-    @Expose
+
     String sdp;
-    @SerializedName("type")
-    @Expose
+
     String type;
 
 

@@ -35,8 +35,7 @@ import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionClient;
 import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionParameters;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcClient;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
+
 
 import android.util.Size;
 import android.graphics.Matrix;
@@ -46,7 +45,8 @@ import android.widget.Toast;
 import org.webrtc.IceCandidate;
 import org.webrtc.MediaStream;
 import org.webrtc.SessionDescription;
-import org.webrtc.VideoRendererGui;
+import org.webrtc.StatsReport;
+
 
 import java.io.IOException;
 
@@ -58,16 +58,19 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
     private int REQUEST_CODE_PERMISSION = 10;
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA"};
     private static final String TAG = "MainActivity";
-    private FirebaseAuth auth;
+    //private FirebaseAuth mAuth;
     private Toast logToast;
     private MyViewModel myViewModel;
     private SocketConnectionHandler socketConnectionHandler;
     private String getPayload;
     private TextureView textureView;
-    private WebRtcClient webRtcClient;
+    private WebRtcClient webRtcClient =  new WebRtcClient();
     private String socketAdress;
     private WebRtcInterface.RoomConnectionParameters roomConnectionParameters;
 
+    public interface messageToWebRtcClient{
+        void messageToWebRTC(String Message);
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -86,7 +89,10 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
                 Point display = new Point();
                 getWindowManager().getDefaultDisplay().getSize(display);
                 PeerConnectionParameters params = new PeerConnectionParameters(true, false, display.x, display.y, 20, 1, VIDEO_CODEC, true, 1, AUDIO_CODEC, true);
-                webRtcClient = new WebRtcClient(this, newName, params, VideoRendererGui.getEGLContext());
+                //webRtcClient = new WebRtcClient(this, newName, params, VideoRendererGui.getEGLContext());
+                Log.d(TAG, "onCreate: " + newName);
+                webRtcClient.decider(newName);
+
                 Log.d(TAG, "onCreate: Does it execute?");
 
             } else {
@@ -116,7 +122,7 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
         recyclerView.setAdapter(adapter);
 
 
-        auth = FirebaseAuth.getInstance();
+        //auth = FirebaseAuth.getInstance();
         textureView = findViewById(R.id.view_finder1);
 
 
@@ -307,7 +313,7 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
 
     }
 
-
+/*
     @Override
     public void onStart() {
         super.onStart();
@@ -326,6 +332,8 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
         }
     }
 
+ */
+
     private void logAndToast(String msg) {
         Log.d(TAG, msg);
         if (logToast != null) {
@@ -335,6 +343,59 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
         logToast.show();
     }
 
+    public void sendMesssage(String messasge){
+        socketConnectionHandler.sendMessageToSocket(messasge);
+    }
+
+    @Override
+    public void onLocalDescription(SessionDescription sdp) {
+
+    }
+
+    @Override
+    public void onIceCandidate(IceCandidate candidate) {
+
+    }
+
+    @Override
+    public void onIceCandidatesRemoved(IceCandidate[] candidates) {
+
+    }
+
+    @Override
+    public void onIceConnected() {
+
+    }
+
+    @Override
+    public void onIceDisconnected() {
+
+    }
+
+    @Override
+    public void onConnected() {
+
+    }
+
+    @Override
+    public void onDsconnected() {
+
+    }
+
+    @Override
+    public void onPeerConnectionClosed() {
+
+    }
+
+    @Override
+    public void onPeerConnectionStateReady(StatsReport[] reports) {
+
+    }
+
+    @Override
+    public void onPeerConnectionError(String description) {
+
+    }
 }
 
 

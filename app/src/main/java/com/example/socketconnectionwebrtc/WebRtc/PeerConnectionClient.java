@@ -17,6 +17,7 @@ import org.webrtc.SessionDescription;
 import org.webrtc.VideoCapturer;
 import org.webrtc.VideoSource;
 import org.webrtc.VideoTrack;
+import org.webrtc.*;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -25,15 +26,18 @@ import java.util.concurrent.Executors;
 import static androidx.constraintlayout.widget.Constraints.TAG;
 
 public class PeerConnectionClient {
+    private static final String AUDIO_CODEC = "ISAC";
     private final PCObserver pcObserver = new PCObserver();
     private final SDPObserver sdpObserver = new SDPObserver();
     private final EGLContext eglContext;
+    private static final String TAG = "PeerConnectionClient";
     private final Context appContext;
     private final PeerConnectionParameters peerConnectionParameters;
     private final PeerConnectionEvents events;
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final boolean dataChannelEnabled;
     private boolean isError;
+    private boolean isInitiator;
     @Nullable
     private PeerConnectionFactory factory;
     @Nullable
@@ -51,6 +55,7 @@ public class PeerConnectionClient {
     private MediaConstraints audioConstraints;
     private MediaConstraints sdpMediaConstraints;
     private boolean preferIsac;
+
 
     public static class PeerConnectionParameters {
         public final boolean videoCallEnabled;
@@ -106,34 +111,54 @@ public class PeerConnectionClient {
         }
     }
 
-    //TODO Do something about options almost 100% not working.
+
     public PeerConnectionClient(Context appContext, EGLContext eglContext, PeerConnectionParameters peerConnectionParameters, PeerConnectionEvents events) {
+
         this.appContext = appContext;
         this.events = events;
         this.eglContext = eglContext;
         this.peerConnectionParameters = peerConnectionParameters;
         this.dataChannelEnabled = peerConnectionParameters.dataChannelParameters != null;
 
-        final String fieldTrials = getFieldTrials(peerConnectionParameters);
-        executor.execute(() -> {
-            Log.d(TAG, "PeerConnectionClient: Field Trails" + fieldTrials);
-            PeerConnectionFactory.initializeAndroidGlobals(fieldTrials, true, true, peerConnectionParameters.videoCodecHwAcceleration, eglContext);
-            PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
 
+        final String fieldTrials = getFieldTrials(peerConnectionParameters);
+
+        executor.execute(() -> {
+            PeerConnectionFactory.initialize(
+                    PeerConnectionFactory.InitializationOptions.builder(appContext)
+                    .setFieldTrials(fieldTrials)
+                    .setEnableInternalTracer(true)
+                    .createInitializationOptions()
+            );
+
+            Log.d(TAG, "PeerConnectionClient: Field Trails" + fieldTrials);
         });
     }
-    //This should only be called once
-    public void createPeerConnectionFactory(PeerConnectionFactory.Options options) {
-        if (factory != null) {
-            throw new IllegalStateException("PeerConnectionFactory has already been constructed");
-        }
-        executor.execute(() -> createPeerConnectionFactoryInternal(options));
+
+
+    public interface PeerConnectionEvents {
+        void onLocalDescription(final SessionDescription sdp);
+
+        void onIceCandidate(final IceCandidate candidate);
+
+        void onIceCandidatesRemoved(final IceCandidate[] candidates);
+
+        void onIceConnected();
+
+        void onIceDisconnected();
+
+        void onConnected();
+
+        void onDsconnected();
+
+        void onPeerConnectionClosed();
+
+        void onPeerConnectionStateReady(final StatsReport[] reports);
+
+        void onPeerConnectionError(final String description);
     }
 
-    private void createPeerConnection(final VideoSink localRender, final VideoSink remoteSink, final VideoCapturer videoCapturer, final WebRtcInterface.SignalingParameters signalingParameters) {
 
-
-    }
     private void createPeerConnectionFactoryInternal(PeerConnectionFactory.Options options) {
         isError = false;
 
@@ -145,9 +170,9 @@ public class PeerConnectionClient {
     }
 
 
-
     private static String getFieldTrials(PeerConnectionParameters peerConnectionParameters) {
-
+        //Change this return statement
+        return String.valueOf(peerConnectionParameters);
     }
 
 
@@ -170,40 +195,107 @@ public class PeerConnectionClient {
         }
     }
 
-    public interface PeerConnectionEvents {
-
+    public void createOffer() {
+        executor.execute(() -> {
+            if (peerConnection != null && !isError) {
+                isInitiator = true;
+                peerConnection.createOffer(sdpObserver, sdpMediaConstraints);
+            }
+        });
     }
+
+    public void createAnswer() {
+        executor.execute(() -> {
+            isInitiator = false;
+            peerConnection.createAnswer(sdpObserver, sdpMediaConstraints);
+        });
+    }
+
 
     private class SDPObserver implements SdpObserver {
         @Override
         public void onCreateSuccess(SessionDescription sessionDescription) {
-
+            if (localSdp != null) {
+                Log.d(TAG, "onCreateSuccess: MULTIPLE SdP");
+                return;
+            }
+            String sdpDescription = sessionDescription.description;
+            final SessionDescription sdp = new SessionDescription(sessionDescription.type, sdpDescription);
+            localSdp = sdp;
+            executor.execute(() -> {
+                if (peerConnection != null && !isError) {
+                    peerConnection.setLocalDescription(sdpObserver, sdp);
+                }
+            });
         }
+
 
         @Override
         public void onSetSuccess() {
+            executor.execute(() -> {
+                        if (peerConnection == null || isError) {
+                            Log.d(TAG, "onSetSuccess: PeerConnection equel null");
+                            return;
+                        }
+                        if (isInitiator) {
+                            // Create Offer
+                            // Set Local SDP
+                            if (peerConnection.getRemoteDescription() == null) {
+                                events.onLocalDescription(localSdp);
+                            } else {
+                                drainCandidates();
+                            }
+                        }
+
+
+                    }
+            );
 
         }
 
         @Override
         public void onCreateFailure(String s) {
-
+            Log.d(TAG, "onCreateFailure:  " + isError);
         }
 
         @Override
         public void onSetFailure(String s) {
+            Log.d(TAG, "onSetFailure: setSdp Error" + isError);
+        }
+    }
 
+    private void drainCandidates() {
+        if (queuedIceCandidates != null) {
+            Log.d(TAG, "drainCandidates: add" + queuedIceCandidates.size() + " Remote Candidates");
+            for (IceCandidate candidate : queuedIceCandidates) {
+                peerConnection.addIceCandidate(candidate);
+            }
+            queuedIceCandidates = null;
         }
     }
 
     private class PCObserver implements PeerConnection.Observer {
         @Override
         public void onSignalingChange(PeerConnection.SignalingState signalingState) {
-
+            Log.d(TAG, "onSignalingChange: NewState fro Signaling!" + signalingState);
         }
 
         @Override
         public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
+            executor.execute(() -> {
+                Log.d(TAG, "onIceConnectionChange:  " + iceConnectionState);
+                if (iceConnectionState == PeerConnection.IceConnectionState.CONNECTED) {
+                    events.onIceConnected();
+                } else if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
+                    events.onIceDisconnected();
+                } else if (iceConnectionState == PeerConnection.IceConnectionState.FAILED) {
+                    Log.d(TAG, "onIceConnectionChange: IceConnectionState Failed");
+                }
+            });
+        }
+
+        @Override
+        public void onIceConnectionReceivingChange(boolean b) {
 
         }
 
@@ -214,8 +306,21 @@ public class PeerConnectionClient {
 
         @Override
         public void onIceCandidate(IceCandidate iceCandidate) {
+            executor.execute(() -> {
+                events.onIceCandidate(iceCandidate);
+            });
+        }
+
+        @Override
+        public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {
+
+
+            executor.execute(() -> {
+                events.onIceCandidatesRemoved(iceCandidates);
+            });
 
         }
+
 
         @Override
         public void onAddStream(MediaStream mediaStream) {
@@ -234,6 +339,11 @@ public class PeerConnectionClient {
 
         @Override
         public void onRenegotiationNeeded() {
+
+        }
+
+        @Override
+        public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
 
         }
     }
