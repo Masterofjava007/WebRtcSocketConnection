@@ -15,13 +15,13 @@ public interface WebRtcInterface {
         public final boolean loopback;
         public final String urlParamteres;
 
-        public RoomConnectionParameters( String roomId, boolean loopback, String urlParamteres) {
+        public RoomConnectionParameters(String roomId, boolean loopback, String urlParamteres) {
             this.roomId = roomId;
             this.loopback = loopback;
             this.urlParamteres = urlParamteres;
         }
 
-        public RoomConnectionParameters( String roomId, boolean loopback) {
+        public RoomConnectionParameters(String roomId, boolean loopback) {
             this(roomId, loopback, null);
 
         }
@@ -42,24 +42,20 @@ public interface WebRtcInterface {
         public final List<PeerConnection.IceServer> iceServer;
         public final boolean initiator;
         public final String clientId;
-        public final String wssUrl;
-        public final String wssPostUrl;
         public final SessionDescription offerSdp;
         public final List<IceCandidate> iceCandidates;
 
         public SignalingParameters(List<PeerConnection.IceServer> iceServer, boolean initiator,
-                                   String clientId, String wssUrl, String wssPostUrl,
+                                   String clientId,
                                    SessionDescription offerSdp, List<IceCandidate> iceCandidates) {
             this.iceServer = iceServer;
             this.initiator = initiator;
             this.clientId = clientId;
-            this.wssUrl = wssUrl;
-            this.wssPostUrl = wssPostUrl;
+
             this.offerSdp = offerSdp;
             this.iceCandidates = iceCandidates;
         }
     }
-
 
 
     interface SignalingEvents {
@@ -75,6 +71,12 @@ public interface WebRtcInterface {
         void onChannelClose();
 
         void onChannelError(final String description);
+
+    }
+
+    interface sendingMessage {
+
+        void sendSdp(SessionDescription offerMessage);
 
     }
 }

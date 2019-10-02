@@ -56,8 +56,9 @@ public class EventHandler {
 
             case receiveOffer:
                 Log.d(TAG, "messageHandler: Entering OfferCall");
-                formattingStringToWebRTC(message);
 
+                myViewModel.sendingMessageToWebRTC(message);
+                Log.d(TAG, "messageHandler: " + unCoverMessage);
 
                 Log.d(TAG, "messageHandler: Do we hit?");
 
@@ -73,6 +74,8 @@ public class EventHandler {
                 break;
             case joinedRoomParticipant:
                 Log.d(TAG, "messageHandler: Entering joinedRoomParticipant");
+                myViewModel.sendingMessageToWebRTC(message);
+
                 break;
             default:
                 Log.d(TAG, "messageHandler: Entering default");
@@ -84,14 +87,14 @@ public class EventHandler {
     public void formattingStringToWebRTC(String message) {
         Log.d(TAG, "formattingStringToWebRTC: 1");
 
-        BaseMessageHandler<OfferMessage> unCoverForWebRTC = gson.fromJson
-                (message, new TypeToken<BaseMessageHandler<OfferMessage>>() {
+        BaseMessageHandler unCoverForWebRTC = gson.fromJson
+                (message, new TypeToken<BaseMessageHandler>() {
                 }.getType());
 
         Log.d(TAG, "formattingStringToWebRTC:  " + unCoverForWebRTC);
-        stringPayload = unCoverForWebRTC.getPayload().getSdp();
+        stringPayload = String.valueOf(unCoverForWebRTC.getPayload());
     Log.d(TAG, "formattingStringToWebRTC: " + message);
-        myViewModel.sendingMessage(unCoverForWebRTC.getType() + unCoverForWebRTC.getPayload().getSdp());
+        myViewModel.sendingMessage(stringPayload);
 
         Log.d(TAG, "formattingStringToWebRTC: 2");
     }

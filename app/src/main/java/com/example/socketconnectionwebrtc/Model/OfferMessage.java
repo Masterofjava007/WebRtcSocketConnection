@@ -7,26 +7,13 @@ import org.webrtc.SessionDescription;
 
 
 public class OfferMessage {
-
+    String type;
     String sdp;
 
-    String type;
 
 
-    public OfferMessage(String sdp, String type) {
-        this.sdp = sdp;
+    public OfferMessage(String type, String sdp) {
         this.type = type;
-    }
-
-    public OfferMessage() {
-
-    }
-
-    public String getSdp() {
-        return sdp;
-    }
-
-    public void setSdp(String sdp) {
         this.sdp = sdp;
     }
 
@@ -36,5 +23,13 @@ public class OfferMessage {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public String getSdp() {
+        return sdp;
+    }
+
+    public void setSdp(String sdp) {
+        this.sdp = sdp;
     }
 }

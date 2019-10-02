@@ -35,6 +35,7 @@ import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionClient;
 import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionParameters;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcClient;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
+import com.google.gson.JsonObject;
 
 
 import android.util.Size;
@@ -42,35 +43,64 @@ import android.graphics.Matrix;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import org.jetbrains.annotations.Nullable;
 import org.webrtc.IceCandidate;
+import org.webrtc.Logging;
 import org.webrtc.MediaStream;
 import org.webrtc.SessionDescription;
 import org.webrtc.StatsReport;
+import org.webrtc.VideoCapturer;
+import org.webrtc.VideoFrame;
+import org.webrtc.VideoSink;
 
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcListener
-        , PeerConnectionClient.PeerConnectionEvents {
+        , PeerConnectionClient.PeerConnectionEvents, WebRtcInterface.sendingMessage {
     private static final String VIDEO_CODEC = "vp9";
     private static final String AUDIO_CODEC = "opus";
+    @Nullable
+    private WebRtcInterface.SignalingParameters signalingParameters;
     private int REQUEST_CODE_PERMISSION = 10;
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA"};
+    private final List<VideoSink> remoteSinks = new ArrayList<>();
     private static final String TAG = "MainActivity";
     //private FirebaseAuth mAuth;
     private Toast logToast;
     private MyViewModel myViewModel;
     private SocketConnectionHandler socketConnectionHandler;
     private String getPayload;
+    private final ProxyVideoSink remoteProxyRenderer = new ProxyVideoSink();
+    private final ProxyVideoSink localProxyVideoSink = new ProxyVideoSink();
     private TextureView textureView;
-    private WebRtcClient webRtcClient =  new WebRtcClient();
+    private WebRtcClient webRtcClient = new WebRtcClient();
     private String socketAdress;
-    private WebRtcInterface.RoomConnectionParameters roomConnectionParameters;
+    private PeerConnectionParameters peerConnectionParameters;
+    @Nullable
+    private PeerConnectionClient peerConnectionClient;
 
-    public interface messageToWebRtcClient{
+    public interface messageToWebRtcClient {
         void messageToWebRTC(String Message);
     }
+
+    private static class ProxyVideoSink implements VideoSink {
+        private VideoSink target;
+
+        @Override
+        synchronized public void onFrame(VideoFrame frame) {
+            if (target == null) {
+                Logging.d(TAG, "Dropping frame in proxy because target is null.");
+                return;
+            }
+
+            target.onFrame(frame);
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -81,30 +111,34 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
         myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
 
 
-
-        //TODO SPLIT DIALOG OG WEBRTC PAYLOAD
+        //TODO SPLIT DIALOG OG WEB-RTC PAYLOAD
         final Observer<String> nameObserver = newName -> {
-            Log.d(TAG, "onCreate: DET ALTSÅ HER");
-            if (newName.length() > 50) {
-                Point display = new Point();
-                getWindowManager().getDefaultDisplay().getSize(display);
-                PeerConnectionParameters params = new PeerConnectionParameters(true, false, display.x, display.y, 20, 1, VIDEO_CODEC, true, 1, AUDIO_CODEC, true);
-                //webRtcClient = new WebRtcClient(this, newName, params, VideoRendererGui.getEGLContext());
-                Log.d(TAG, "onCreate: " + newName);
-                webRtcClient.decider(newName);
+            Log.d(TAG, "onCreate: " + newName);
 
-                Log.d(TAG, "onCreate: Does it execute?");
 
-            } else {
-                Log.d(TAG, "onCreate: HVAD ER NEWNAME" + newName);
-                //TODO FIX DIALOG SÅ HVERGANG MAN KLIKKER IKKE SPAMMER DET SAMME
-                dialog(newName);
-            }
+            Log.d(TAG, "onCreate: HVAD ER NEWNAME" + newName);
+            //TODO FIX DIALOG SÅ HVERGANG MAN KLIKKER IKKE SPAMMER DET SAMME
+            dialog(newName);
+
+
+        };
+        final Observer<String> webRtcObserver = newWebRTCMessage -> {
+            Log.d(TAG, "onCreate: Does it worK?");
+            Point display = new Point();
+            getWindowManager().getDefaultDisplay().getSize(display);
+            PeerConnectionParameters params = new PeerConnectionParameters(true, false, display.x, display.y, 20, 1, VIDEO_CODEC, true, 1, AUDIO_CODEC, true);
+            //webRtcClient = new WebRtcClient(this, newName, params, VideoRendererGui.getEGLContext());
+            Log.d(TAG, "onCreate: " + newWebRTCMessage);
+
+            webRtcClient.decider(newWebRTCMessage);
+
+
         };
 
 
         // Observe the LiveData, passing in this activity as the LifecycleOwner and the observer.
         myViewModel.getEventMessage().observe(this, nameObserver);
+        myViewModel.getMessageToWebRTC().observe(this, webRtcObserver);
 
         try {
             socketConnectionHandler = new SocketConnectionHandler(this);
@@ -133,6 +167,31 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
             startCamera();
         } catch (Exception e) {
             Log.d(TAG, "onCreate: " + e);
+        }
+    }
+
+    private void onConnectedToRoomInternal(final WebRtcInterface.SignalingParameters params) {
+        VideoCapturer videoCapturer = null;
+
+        if (peerConnectionParameters.videoCallEnabled) {
+            startCamera();
+        }
+
+        peerConnectionClient.createPeerConnection(localProxyVideoSink, remoteSinks, videoCapturer, signalingParameters);
+
+        if (signalingParameters.initiator) {
+            Log.d(TAG, "onConnectedToRoomInternal: CREATING OFFER");
+            peerConnectionClient.createOffer();
+        } else {
+            if (params.offerSdp != null) {
+                peerConnectionClient.setRemoteDescription(params.offerSdp);
+                peerConnectionClient.createAnswer();
+            }
+            if (params.iceCandidates != null) {
+                for (IceCandidate iceCandidate : params.iceCandidates) {
+                    peerConnectionClient.addRemoteiceCandidate(iceCandidate);
+                }
+            }
         }
     }
 
@@ -343,7 +402,11 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
         logToast.show();
     }
 
-    public void sendMesssage(String messasge){
+    public void sendSdp(SessionDescription jsonObject) {
+        socketConnectionHandler.sendMessageToSocketFromOffer(jsonObject);
+    }
+
+    public void sendMesssage(String messasge) {
         socketConnectionHandler.sendMessageToSocket(messasge);
     }
 

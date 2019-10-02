@@ -7,5 +7,9 @@ public enum MessageType  {
     receiveOffer,
     dismissCall,
     joinedRoomParticipant,
-    rejectCall
+    rejectCall,
+    offer,
+    init,
+    answer,
+    candidate
 }

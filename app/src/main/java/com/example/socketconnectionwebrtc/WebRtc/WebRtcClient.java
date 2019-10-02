@@ -4,10 +4,15 @@ package com.example.socketconnectionwebrtc.WebRtc;
 import android.util.Log;
 
 import com.example.socketconnectionwebrtc.BootStrap.MainActivity;
+import com.example.socketconnectionwebrtc.Enum.MessageType;
+import com.example.socketconnectionwebrtc.Enum.WebRTCEnums;
+import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
+import com.example.socketconnectionwebrtc.Model.OfferMessage;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -21,69 +26,72 @@ import org.webrtc.SdpObserver;
 import org.webrtc.SessionDescription;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.ServiceConfigurationError;
 
+import static com.example.socketconnectionwebrtc.Enum.WebRTCEnums.offer;
+import static com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface.*;
 
-public class WebRtcClient {
+
+public class WebRtcClient implements WebRtcInterface.sendingMessage{
     private static final String TAG = "WebRtcClient";
     private MediaConstraints pcConstraints = new MediaConstraints();
-    private WebRtcInterface.SignalingEvents signalingEvents;
+    private PeerConnectionClient peerConnectionClient;
     private final static int MAX_PEER = 2;
-    private MainActivity mainActivity;
-    private PeerConnectionParameters pcParams;
+
+
     private boolean[] endPoints = new boolean[MAX_PEER];
-    private LinkedList<PeerConnection.IceServer> iceServers = new LinkedList<>();
-    private PeerConnectionFactory factory;
-    private ConnectionState roomState;
-    private MediaStream localMS;
+
+
     private static String HOST_DOMAIN = "firstlineconnect.com";
     private static String SignalingServerHost = "wss://:1338";
-    private RtcListener mListener;
+
     private Gson gson = new Gson();
+    private RoomConnectionParameters connectionParameters;
+
 
     public void decider(String message) {
-        try {
+
+        Log.d(TAG, "decider: " + message);
 
 
-            Log.d(TAG, "decider: Hey");
+        BaseMessageHandler<OfferMessage> unCoverMessageToWebRTC = gson.fromJson
+                (message, new TypeToken<BaseMessageHandler<OfferMessage>>() {
+                }.getType());
+        Log.d(TAG, "decider: " + unCoverMessageToWebRTC);
+        String messageType = unCoverMessageToWebRTC.getPayload().getType();
+        Log.d(TAG, "decider: " + messageType);
+        MessageType webRTCEnums = MessageType.valueOf(messageType);
 
-            JsonObject newJson = new JsonObject();
-            newJson.get(gson.toJson(message));
+        switch (webRTCEnums) {
 
-            String type = String.valueOf(newJson.get("receiveOffer"));
 
-            Log.d(TAG, "decider: " + message);
-            if (type.equals("candidate")) {
-                signalingEvents.onRemoteIceCandidate(toJavaCandidate(newJson));
-
-            } else if (type.equals("answer")) {
-                SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm(type), newJson.get("sdp").toString());
-
-            } else if (type.equals("offer")) {
+            case offer:
                 Log.d(TAG, "decider: Rammer vi her?");
-                SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm(type), newJson.get("sdp").toString());
 
-                WebRtcInterface.SignalingParameters parameteres = new WebRtcInterface.SignalingParameters(
-                        new ArrayList<>(),
-                        false,
-                        null,
-                        null,
-                        null,
-                        sdp,
-                        null
-                );
-                roomState = ConnectionState.CONNECTIED;
-                signalingEvents.onConnectedToRoom(parameteres);
-            }
+                SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm(unCoverMessageToWebRTC.getPayload().getType()), unCoverMessageToWebRTC.getPayload().getSdp());
+                Log.d(TAG, "decider: This is the SDP " + sdp);
 
-        } catch (Exception e) {
-            Log.d(TAG, "decider: " + e);
+                System.out.println(sdp);
+                sendSdp(sdp);
+
+
+                break;
+            case candidate:
+                // signalingEvents.onRemoteIceCandidate(toJavaCandidate(newJson));
+                break;
+            case answer:
+                //SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm(message), newJson.get("sdp").toString());
+                //signalingEvents.onRemoteDescription(sdp);
+                break;
 
         }
     }
+
 
     private static IceCandidate toJavaCandidate(JsonObject jsonObject) throws JSONException {
         return new IceCandidate(jsonObject.get("name").toString(), jsonObject.get("label").getAsInt(), jsonObject.get("candidate").toString());
@@ -110,6 +118,11 @@ public class WebRtcClient {
         return MAX_PEER;
     }
 
+    @Override
+    public void sendSdp(SessionDescription offerMessage) {
+
+    }
+
     public interface RtcListener {
         void onCallReady(String callId);
 
@@ -124,19 +137,8 @@ public class WebRtcClient {
 
     private interface Command {
         void execute(String peerid, JsonObject jsonPayload) throws JSONException;
-    }
 
-    /*
-    private class createOffcerCommand implements Command {
-
-        @Override
-        public void execute(String peerId, JsonObject jsonPayload) throws JSONException {
-            Log.d(TAG, "execute: Entered createOfferCommand");
-            Peer peer = peers.get(peerId);
-            peer.pc.createOffer(peer, pcConstraints);
-        }
     }
-*/
 
     public void sendMessage(String to, String type, JSONObject payload) throws JSONException {
         JSONObject message = new JSONObject();
@@ -148,47 +150,10 @@ public class WebRtcClient {
 
 
 
-
-
-        /*
-        MediaConstraints constraints = new MediaConstraints();
-        PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
-        PeerConnectionFactory peerConnectionFactory = PeerConnectionFactory.builder().createPeerConnectionFactory(iceServers, constraints);
-*/
-        /*
-        final PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
-        PeerConnectionFactory factory = new PeerConnectionFactory(new PeerConnectionFactory.Options());
-        MediaConstraints constraints = new MediaConstraints();
-        PeerConnection peerConnection = factory.createPeerConnection(iceServers, constraints, new YourPeerConnectionObserver());
-*/
-    // SessionDescription receivedSDP; //decode this from the received offer
-
-    //peerConnection.setRemoteDescription(this, receivedSDP);
-
-
     //TODO See if we capture frame from main
 
 
     //TODO Make this called from main
-/*
-    public void mapPayloadToSession(String payloadMessage) throws JSONException {
 
-        Gson gson = new Gson();
-
-        OfferMessage offer = new OfferMessage(payloadMessage, "offer");
-
-        Log.d(TAG, "mapPayloadToSession: Rammer vi? " + payloadMessage);
-
-        CreateAnswerCommand createAnswerCommand = new CreateAnswerCommand();
-
-        String JsonString = gson.toJson(payloadMessage);
-
-        Log.d(TAG, "mapPayloadToSession: " + JsonString);
-
-        createAnswerCommand.execute("1", gson.toJson(offer));
-
-    }
-
- */
 }
 

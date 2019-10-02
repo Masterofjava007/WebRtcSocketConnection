@@ -4,9 +4,11 @@ public enum WebRTCEnums {
     offer,
     init,
     answer,
-    candidate
+    candidate;
 
+    private int getValue;
 
-
-
+    public int getGetValue() {
+        return getValue;
+    }
 }

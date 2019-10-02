@@ -42,10 +42,14 @@ public class MyViewModel extends ViewModel {
         return eventMessage;
     }
 
+
     public void sendingMessage(String messageFromEventHandler) {
         Log.d(TAG, "sendingMessage: enter sendingMessage");
         eventMessage.postValue(messageFromEventHandler);
 
+    }
+    public void sendingMessageToWebRTC (String messagetoWebRtc){
+        messageToWebRTC.postValue(messagetoWebRtc);
     }
 
 }
