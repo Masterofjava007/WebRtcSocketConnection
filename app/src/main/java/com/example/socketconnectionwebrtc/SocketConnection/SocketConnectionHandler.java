@@ -1,25 +1,17 @@
 package com.example.socketconnectionwebrtc.SocketConnection;
 
 import android.util.Log;
-
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.example.socketconnectionwebrtc.EventHandler.EventHandler;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
 import com.example.socketconnectionwebrtc.Enum.MessageType;
-import com.example.socketconnectionwebrtc.Model.OfferMessage;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
-
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import com.neovisionaries.ws.client.WebSocket;
 import com.neovisionaries.ws.client.WebSocketAdapter;
 import com.neovisionaries.ws.client.WebSocketException;
 import com.neovisionaries.ws.client.WebSocketFactory;
-
-import org.json.JSONObject;
 import org.webrtc.SessionDescription;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;

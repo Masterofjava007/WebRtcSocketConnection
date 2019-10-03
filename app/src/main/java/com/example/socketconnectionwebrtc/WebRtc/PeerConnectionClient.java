@@ -44,7 +44,6 @@ public class PeerConnectionClient {
     private final boolean dataChannelEnabled;
     private boolean isError;
     private final EglBase rootEglBase;
-
     private int videoWidth;
     private int videoHeight;
     private int videoFps;
@@ -76,7 +75,7 @@ public class PeerConnectionClient {
     @Nullable
     private List<IceCandidate> queuedIceCandidates;
     private MediaConstraints audioConstraints;
-    private MediaConstraints sdpMediaConstraints;
+    private MediaConstraints sdpMediaConstraints = new MediaConstraints();
     private boolean preferIsac;
 
 
@@ -315,6 +314,12 @@ public class PeerConnectionClient {
         localVideoTrack.addSink(localrender);
         return localVideoTrack;
     }
+    public void createPeerConnectionFactory (PeerConnectionFactory.Options options) {
+        if (factory != null) {
+            throw new IllegalStateException("PeerConnection Have Already been constructed");
+        }
+        executor.execute(() -> createPeerConnectionFactoryInternal(options));
+    }
 
 
     private void createPeerConnectionFactoryInternal(PeerConnectionFactory.Options options) {
@@ -425,13 +430,16 @@ public class PeerConnectionClient {
                                 events.onLocalDescription(localSdp);
                             } else {
                                 drainCandidates();
+                                if (peerConnection.getLocalDescription() != null) {
+                                    events.onLocalDescription(localSdp);
+                                    drainCandidates();
+                                } else {
+                                    Log.d(TAG, "onSetSuccess: Remote SDP Set Success");
+                                }
                             }
                         }
-
-
                     }
             );
-
         }
 
         @Override

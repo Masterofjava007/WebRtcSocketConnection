@@ -4,7 +4,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Point;
-import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Rational;
@@ -26,16 +25,17 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.socketconnectionwebrtc.Enum.MessageType;
-import com.example.socketconnectionwebrtc.Login.LoginManager;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
+import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
+import com.example.socketconnectionwebrtc.Model.OfferMessage;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
 import com.example.socketconnectionwebrtc.R;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
 import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionClient;
-import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionParameters;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcClient;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
-import com.google.gson.JsonObject;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 
 import android.util.Size;
@@ -44,9 +44,11 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import org.jetbrains.annotations.Nullable;
+import org.webrtc.EglBase;
 import org.webrtc.IceCandidate;
 import org.webrtc.Logging;
 import org.webrtc.MediaStream;
+import org.webrtc.PeerConnectionFactory;
 import org.webrtc.SessionDescription;
 import org.webrtc.StatsReport;
 import org.webrtc.VideoCapturer;
@@ -58,11 +60,45 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static android.nfc.NfcAdapter.EXTRA_ID;
+
 
 public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcListener
         , PeerConnectionClient.PeerConnectionEvents, WebRtcInterface.sendingMessage {
-    private static final String VIDEO_CODEC = "vp9";
-    private static final String AUDIO_CODEC = "opus";
+    public static final String EXTRA_VIDEO_WIDTH = "org.appspot.apprtc.VIDEO_WIDTH";
+    public static final String EXTRA_VIDEO_HEIGHT = "org.appspot.apprtc.VIDEO_HEIGHT";
+    private boolean commandLineRun;
+    public static final String EXTRA_PROTOCOL = "org.appspot.apprtc.PROTOCOL";
+    public static final String EXTRA_NEGOTIATED = "org.appspot.apprtc.NEGOTIATED";
+    public static final String EXTRA_DATA_CHANNEL_ENABLED = "org.appspot.apprtc.DATA_CHANNEL_ENABLED";
+    public static final String EXTRA_ORDERED = "org.appspot.apprtc.ORDERED";
+    public static final String EXTRA_MAX_RETRANSMITS_MS = "org.appspot.apprtc.MAX_RETRANSMITS_MS";
+    public static final String EXTRA_MAX_RETRANSMITS = "org.appspot.apprtc.MAX_RETRANSMITS";
+    public static final String EXTRA_LOOPBACK = "org.appspot.apprtc.LOOPBACK";
+    public static final String EXTRA_VIDEO_CALL = "org.appspot.apprtc.VIDEO_CALL";
+    public static final String EXTRA_VIDEO_FPS = "org.appspot.apprtc.VIDEO_FPS";
+    public static final String EXTRA_VIDEO_BITRATE = "org.appspot.apprtc.VIDEO_BITRATE";
+    public static final String EXTRA_VIDEOCODEC = "org.appspot.apprtc.VIDEOCODEC";
+    public static final String EXTRA_HWCODEC_ENABLED = "org.appspot.apprtc.HWCODEC";
+    public static final String EXTRA_FLEXFEC_ENABLED = "org.appspot.apprtc.FLEXFEC";
+    public static final String EXTRA_AUDIO_BITRATE = "org.appspot.apprtc.AUDIO_BITRATE";
+    public static final String EXTRA_AUDIOCODEC = "org.appspot.apprtc.AUDIOCODEC";
+    public static final String EXTRA_NOAUDIOPROCESSING_ENABLED =
+            "org.appspot.apprtc.NOAUDIOPROCESSING";
+    public static final String EXTRA_AECDUMP_ENABLED = "org.appspot.apprtc.AECDUMP";
+    public static final String EXTRA_SAVE_INPUT_AUDIO_TO_FILE_ENABLED =
+            "org.appspot.apprtc.SAVE_INPUT_AUDIO_TO_FILE";
+    public static final String EXTRA_OPENSLES_ENABLED = "org.appspot.apprtc.OPENSLES";
+    public static final String EXTRA_DISABLE_BUILT_IN_AEC = "org.appspot.apprtc.DISABLE_BUILT_IN_AEC";
+    public static final String EXTRA_DISABLE_BUILT_IN_AGC = "org.appspot.apprtc.DISABLE_BUILT_IN_AGC";
+    public static final String EXTRA_DISABLE_BUILT_IN_NS = "org.appspot.apprtc.DISABLE_BUILT_IN_NS";
+    public static final String EXTRA_DISABLE_WEBRTC_AGC_AND_HPF =
+            "org.appspot.apprtc.DISABLE_WEBRTC_GAIN_CONTROL";
+    public static final String EXTRA_CMDLINE = "org.appspot.apprtc.CMDLINE";
+    public static final String EXTRA_RUNTIME = "org.appspot.apprtc.RUNTIME";
+
+    public static final String EXTRA_ENABLE_RTCEVENTLOG = "org.appspot.apprtc.ENABLE_RTCEVENTLOG";
+
     @Nullable
     private WebRtcInterface.SignalingParameters signalingParameters;
     private int REQUEST_CODE_PERMISSION = 10;
@@ -73,15 +109,18 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
     private Toast logToast;
     private MyViewModel myViewModel;
     private SocketConnectionHandler socketConnectionHandler;
-    private String getPayload;
+    public static final String EXTRA_TRACING = "org.appspot.apprtc.TRACING";
+
     private final ProxyVideoSink remoteProxyRenderer = new ProxyVideoSink();
     private final ProxyVideoSink localProxyVideoSink = new ProxyVideoSink();
     private TextureView textureView;
     private WebRtcClient webRtcClient = new WebRtcClient();
-    private String socketAdress;
-    private PeerConnectionParameters peerConnectionParameters;
+    @Nullable
+    private PeerConnectionClient.PeerConnectionParameters peerConnectionParameters;
     @Nullable
     private PeerConnectionClient peerConnectionClient;
+    Gson gson = new Gson();
+    final EglBase eglBase = EglBase.create();
 
     public interface messageToWebRtcClient {
         void messageToWebRTC(String Message);
@@ -105,7 +144,7 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        signalingParameters = null;
         final Intent intent = getIntent();
         Log.d(TAG, "onCreate: Andrei");
         myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
@@ -114,8 +153,6 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
         //TODO SPLIT DIALOG OG WEB-RTC PAYLOAD
         final Observer<String> nameObserver = newName -> {
             Log.d(TAG, "onCreate: " + newName);
-
-
             Log.d(TAG, "onCreate: HVAD ER NEWNAME" + newName);
             //TODO FIX DIALOG SÅ HVERGANG MAN KLIKKER IKKE SPAMMER DET SAMME
             dialog(newName);
@@ -126,11 +163,9 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
             Log.d(TAG, "onCreate: Does it worK?");
             Point display = new Point();
             getWindowManager().getDefaultDisplay().getSize(display);
-            PeerConnectionParameters params = new PeerConnectionParameters(true, false, display.x, display.y, 20, 1, VIDEO_CODEC, true, 1, AUDIO_CODEC, true);
-            //webRtcClient = new WebRtcClient(this, newName, params, VideoRendererGui.getEGLContext());
             Log.d(TAG, "onCreate: " + newWebRTCMessage);
 
-            webRtcClient.decider(newWebRTCMessage);
+            decider(newWebRTCMessage);
 
 
         };
@@ -145,7 +180,38 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
         } catch (IOException e) {
             e.printStackTrace();
         }
+        boolean tracing = intent.getBooleanExtra(EXTRA_TRACING, false);
+        boolean loopback = intent.getBooleanExtra(EXTRA_LOOPBACK, false);
 
+        int videoWidth = intent.getIntExtra(EXTRA_VIDEO_WIDTH, 0);
+        int videoHeight = intent.getIntExtra(EXTRA_VIDEO_HEIGHT, 0);
+
+        PeerConnectionClient.DataChannelParameters dataChannelParameters = null;
+        if (intent.getBooleanExtra(EXTRA_DATA_CHANNEL_ENABLED, false)) {
+            dataChannelParameters = new PeerConnectionClient.DataChannelParameters(intent.getBooleanExtra(EXTRA_ORDERED, true),
+                    intent.getIntExtra(EXTRA_MAX_RETRANSMITS_MS, -1),
+                    intent.getIntExtra(EXTRA_MAX_RETRANSMITS, -1), intent.getStringExtra(EXTRA_PROTOCOL),
+                    intent.getBooleanExtra(EXTRA_NEGOTIATED, false), intent.getIntExtra(EXTRA_ID, -1));
+        }
+
+        peerConnectionParameters =
+                new PeerConnectionClient.PeerConnectionParameters(intent.getBooleanExtra(EXTRA_VIDEO_CALL, true), loopback,
+                        tracing, videoWidth, videoHeight, intent.getIntExtra(EXTRA_VIDEO_FPS, 0),
+                        intent.getIntExtra(EXTRA_VIDEO_BITRATE, 0), intent.getStringExtra(EXTRA_VIDEOCODEC),
+                        intent.getBooleanExtra(EXTRA_HWCODEC_ENABLED, true),
+                        intent.getBooleanExtra(EXTRA_FLEXFEC_ENABLED, false),
+                        intent.getIntExtra(EXTRA_AUDIO_BITRATE, 0), intent.getStringExtra(EXTRA_AUDIOCODEC),
+                        intent.getBooleanExtra(EXTRA_NOAUDIOPROCESSING_ENABLED, false),
+                        intent.getBooleanExtra(EXTRA_AECDUMP_ENABLED, false),
+                        intent.getBooleanExtra(EXTRA_SAVE_INPUT_AUDIO_TO_FILE_ENABLED, false),
+                        intent.getBooleanExtra(EXTRA_OPENSLES_ENABLED, false),
+                        intent.getBooleanExtra(EXTRA_DISABLE_BUILT_IN_AEC, false),
+                        intent.getBooleanExtra(EXTRA_DISABLE_BUILT_IN_AGC, false),
+                        intent.getBooleanExtra(EXTRA_DISABLE_BUILT_IN_NS, false),
+                        intent.getBooleanExtra(EXTRA_DISABLE_WEBRTC_AGC_AND_HPF, false),
+                        intent.getBooleanExtra(EXTRA_ENABLE_RTCEVENTLOG, false), dataChannelParameters);
+        commandLineRun = intent.getBooleanExtra(EXTRA_CMDLINE, false);
+        int runTimeMs = intent.getIntExtra(EXTRA_RUNTIME, 0);
 
         RecyclerView recyclerView = findViewById(R.id.textViewRecycleerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -168,9 +234,69 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
         } catch (Exception e) {
             Log.d(TAG, "onCreate: " + e);
         }
+
+        // Create peer connection client.
+        peerConnectionClient = new PeerConnectionClient(
+                getApplicationContext(), eglBase, peerConnectionParameters, MainActivity.this);
+        PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
+        options.networkIgnoreMask = 0;
+
+        peerConnectionClient.createPeerConnectionFactory(options);
+
     }
 
+    public void decider(String message) {
+
+        Log.d(TAG, "decider: " + message);
+
+
+        BaseMessageHandler<OfferMessage> unCoverMessageToWebRTC = gson.fromJson
+                (message, new TypeToken<BaseMessageHandler<OfferMessage>>() {
+                }.getType());
+        Log.d(TAG, "decider: " + unCoverMessageToWebRTC);
+        String messageType = unCoverMessageToWebRTC.getPayload().getType();
+        Log.d(TAG, "decider: " + messageType);
+        MessageType webRTCEnums = MessageType.valueOf(messageType);
+
+        switch (webRTCEnums) {
+
+
+            case offer:
+                Log.d(TAG, "decider: Rammer vi her?");
+
+                SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm(unCoverMessageToWebRTC.getPayload().getType()), unCoverMessageToWebRTC.getPayload().getSdp());
+
+                WebRtcInterface.SignalingParameters parameters  = new WebRtcInterface.SignalingParameters(
+                        new ArrayList<>(),
+                        false,
+                        null,
+                        sdp,
+                        null
+                );
+                onCreatingAnswerSdp(parameters);
+
+
+                break;
+            case candidate:
+                Log.d(TAG, "decider: rammer vi her??????");
+                break;
+            case answer:
+                //SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm(message), newJson.get("sdp").toString());
+                //signalingEvents.onRemoteDescription(sdp);
+                break;
+
+        }
+    }
+
+    private void onCreatingAnswerSdp(WebRtcInterface.SignalingParameters parameters) {
+
+        peerConnectionClient.setRemoteDescription(parameters.offerSdp);
+        peerConnectionClient.createAnswer();
+    }
+
+
     private void onConnectedToRoomInternal(final WebRtcInterface.SignalingParameters params) {
+        signalingParameters = params;
         VideoCapturer videoCapturer = null;
 
         if (peerConnectionParameters.videoCallEnabled) {
@@ -214,7 +340,8 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
                         Log.d(TAG, "onClick: Dialog On Click Yes");
 
                         socketConnectionHandler.sendMessageToSocket(new BaseMessage(MessageType.acceptCall, new RoomDetails("+4529933087", "Steffen")));
-                    }
+                        onConnectedToRoomInternal(signalingParameters);
+                }
 
                 }).show();
     }
@@ -291,7 +418,6 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
         mx.postRotate((float) rotationDgr, cx, cy);
         textureView.setTransform(mx);
     }
-
 
     public void ConnectToSocket() {
         try {
@@ -459,6 +585,8 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
     public void onPeerConnectionError(String description) {
 
     }
+
+
 }
 
 
