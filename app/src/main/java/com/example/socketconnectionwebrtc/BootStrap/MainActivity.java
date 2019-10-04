@@ -31,6 +31,7 @@ import com.example.socketconnectionwebrtc.Model.OfferMessage;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
 import com.example.socketconnectionwebrtc.R;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
+import com.example.socketconnectionwebrtc.WebRtc.ConnectionState;
 import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionClient;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcClient;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
@@ -115,6 +116,7 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
     private final ProxyVideoSink localProxyVideoSink = new ProxyVideoSink();
     private TextureView textureView;
     private WebRtcClient webRtcClient = new WebRtcClient();
+    private WebRtcInterface.SignalingEvents events;
     @Nullable
     private PeerConnectionClient.PeerConnectionParameters peerConnectionParameters;
     @Nullable
@@ -142,14 +144,15 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        //TODO FIND UD AF EN MÅDE AT UNDGÅ ALLE DE HER NULLPOINTERE
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        signalingParameters = null;
+
         final Intent intent = getIntent();
         Log.d(TAG, "onCreate: Andrei");
         myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
 
-
+        signalingParameters = null;
         //TODO SPLIT DIALOG OG WEB-RTC PAYLOAD
         final Observer<String> nameObserver = newName -> {
             Log.d(TAG, "onCreate: " + newName);
@@ -305,7 +308,7 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
 
         peerConnectionClient.createPeerConnection(localProxyVideoSink, remoteSinks, videoCapturer, signalingParameters);
 
-        if (signalingParameters.initiator) {
+        if (true) {
             Log.d(TAG, "onConnectedToRoomInternal: CREATING OFFER");
             peerConnectionClient.createOffer();
         } else {
@@ -340,12 +343,29 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
                         Log.d(TAG, "onClick: Dialog On Click Yes");
 
                         socketConnectionHandler.sendMessageToSocket(new BaseMessage(MessageType.acceptCall, new RoomDetails("+4529933087", "Steffen")));
+                        //TODO SIGNALING PARAMETERS NULLPOINTER
                         onConnectedToRoomInternal(signalingParameters);
                 }
 
                 }).show();
     }
 
+    public void onTCPConnected(boolean isServer) {
+        if (isServer) {
+
+
+            WebRtcInterface.SignalingParameters parameters = new WebRtcInterface.SignalingParameters(
+                    // Ice servers are not needed for direct connections.
+                    new ArrayList<>(),
+                    isServer, // Server side acts as the initiator on direct connections.
+                    null, // clientId
+                    null, // wssUrl
+                    null // wwsPostUrl
+
+            );
+           events.onConnectedToRoom(parameters);
+        }
+    }
     public void startCamera() {
         Log.d(TAG, "startCamera: Inside StartCamera");
         CameraX.unbindAll();
