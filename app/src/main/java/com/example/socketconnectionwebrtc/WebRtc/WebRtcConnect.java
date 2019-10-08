@@ -7,6 +7,7 @@ import com.example.socketconnectionwebrtc.BootStrap.MainActivity;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
 import com.google.gson.JsonObject;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.IceCandidate;
 import org.webrtc.SessionDescription;
@@ -28,7 +29,10 @@ public class WebRtcConnect implements WebRtcInterface {
 
     }
 
-
+public interface onSending{
+        void sendMessageString();
+        void sendMessageJson();
+}
 
     public void sendMessage(String message){
         executorService.execute(new Runnable() {
@@ -62,9 +66,22 @@ public class WebRtcConnect implements WebRtcInterface {
 
     @Override
     public void sendAnswerSdp(SessionDescription sdp) {
+        Log.d(TAG, "sendAnswerSdp: Hallo!");
+        executorService.execute(() ->{
+            JSONObject json = new JSONObject();
+             jsonPut(json,"sdp", sdp.description);
+             jsonPut(json, "type", "answer");
+             mainActivity.sendSdp(json);
 
+        });
     }
-
+    private static void jsonPut(JSONObject json, String key, Object value) {
+        try {
+            json.put(key, value);
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
+    }
     @Override
     public void sendLocalIceandidate(IceCandidate candidate) {
 

@@ -2,10 +2,17 @@ package com.example.socketconnectionwebrtc.WebRtc;
 
 import android.content.Context;
 import android.opengl.EGLContext;
+import android.os.Environment;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
 
+import com.example.socketconnectionwebrtc.BootStrap.MainActivity;
+import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
+import org.json.JSONObject;
 import org.webrtc.DataChannel;
 import org.webrtc.IceCandidate;
 import org.webrtc.MediaConstraints;
@@ -18,6 +25,7 @@ import org.webrtc.VideoCapturer;
 import org.webrtc.VideoSource;
 import org.webrtc.VideoTrack;
 import org.webrtc.*;
+import org.webrtc.audio.AudioDeviceModule;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,6 +56,7 @@ public class PeerConnectionClient {
     private int videoHeight;
     private int videoFps;
     private boolean isInitiator;
+    private Gson gson = new Gson();
     private WebRtcInterface.SignalingParameters signalingParameters;
     @org.jetbrains.annotations.Nullable
     private VideoCapturer videoCapturer;
@@ -77,7 +86,7 @@ public class PeerConnectionClient {
     private MediaConstraints audioConstraints;
     private MediaConstraints sdpMediaConstraints = new MediaConstraints();
     private boolean preferIsac;
-
+    private MainActivity main = new MainActivity();
 
     public void setRemoteDescription(SessionDescription offerSdp) {
         Log.d(TAG, "setRemoteDescription: SetRemoteDescription");
@@ -92,7 +101,7 @@ public class PeerConnectionClient {
         });
     }
 
-    public void addRemoteiceCandidate(IceCandidate iceCandidate) {
+    public void addRemoteIceCandidate(IceCandidate iceCandidate) {
         executor.execute(() -> {
                     if (peerConnection != null && !isError) {
                         if (queuedIceCandidates != null) {
@@ -205,6 +214,7 @@ public class PeerConnectionClient {
 
 
     public interface PeerConnectionEvents {
+
         void onLocalDescription(final SessionDescription sdp);
 
         void onIceCandidate(final IceCandidate candidate);
@@ -314,11 +324,12 @@ public class PeerConnectionClient {
         localVideoTrack.addSink(localrender);
         return localVideoTrack;
     }
-    public void createPeerConnectionFactory (PeerConnectionFactory.Options options) {
+
+    public void createPeerConnectionFactory(PeerConnectionFactory.Options options) {
         if (factory != null) {
             throw new IllegalStateException("PeerConnection Have Already been constructed");
         }
-        executor.execute(() -> createPeerConnectionFactoryInternal(options));
+        createPeerConnectionFactoryInternal(options);
     }
 
 
@@ -326,17 +337,22 @@ public class PeerConnectionClient {
         isError = false;
 
         if (peerConnectionParameters.tracing) {
-            Log.d(TAG, "createPeerConnectionFactoryInternal: først if peeronnectionparamter.tracing");
+            PeerConnectionFactory.startInternalTracingCapture(Environment.getDataDirectory().getAbsolutePath());
         }
-        preferIsac = peerConnectionParameters.audioCodec != null;
+        preferIsac = peerConnectionParameters.audioCodec != null && peerConnectionParameters.equals(AUDIO_CODEC);
 
+        factory = PeerConnectionFactory.builder()
+                .setOptions(options)
+                .createPeerConnectionFactory();
+        Log.d(TAG, "Peer connection factory created.");
     }
+
 
     private boolean isVideoCallEnabled() {
         return peerConnectionParameters.videoCallEnabled && videoCapturer != null;
     }
 
-    private void createMediaConstraintsInternal() {
+    public void createMediaConstraintsInternal() {
         Log.d(TAG, "createMediaConstraintsInternal: Setting media Constraints or creating media Constraints ");
         //Creating a video constrains if video is enabled
         if (isVideoCallEnabled()) {
@@ -391,12 +407,10 @@ public class PeerConnectionClient {
     }
 
     public void createAnswer() {
-        executor.execute(() -> {
-            isInitiator = false;
-            peerConnection.createAnswer(sdpObserver, sdpMediaConstraints);
-        });
-    }
 
+            peerConnection.createAnswer(sdpObserver, sdpMediaConstraints);
+
+    }
 
     private class SDPObserver implements SdpObserver {
         @Override
@@ -437,6 +451,8 @@ public class PeerConnectionClient {
                                     Log.d(TAG, "onSetSuccess: Remote SDP Set Success");
                                 }
                             }
+                        } else {
+
                         }
                     }
             );

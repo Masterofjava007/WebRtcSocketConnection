@@ -13,15 +13,18 @@ import com.example.socketconnectionwebrtc.Model.BaseMessage;
 import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
 import com.example.socketconnectionwebrtc.Model.InitiaeCallMessage;
 import com.example.socketconnectionwebrtc.Model.OfferMessage;
+import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionClient;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcClient;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+
+import org.webrtc.PeerConnectionFactory;
 
 
 public class EventHandler {
     private AppCompatActivity mActivity;
     private String stringType, stringPayload;
-
+    PeerConnectionClient peerConnectionClient;
     public EventHandler(AppCompatActivity activity) {
         mActivity = activity;
         myViewModel = ViewModelProviders.of(activity).get(MyViewModel.class);
@@ -74,7 +77,7 @@ public class EventHandler {
                 break;
             case joinedRoomParticipant:
                 Log.d(TAG, "messageHandler: Entering joinedRoomParticipant");
-               // myViewModel.sendingMessageToWebRTC(message);
+                   //myViewModel.sendingMessageToWebRTC(message);
 
                 break;
             default:

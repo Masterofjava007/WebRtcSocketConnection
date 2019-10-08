@@ -24,7 +24,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".BootStrap.myFragment"></activity>
+
         <activity android:name=".Login.VerifyAccont" />
         <activity android:name=".Login.LoginManager" />
         <activity android:name=".BootStrap.MainActivity">

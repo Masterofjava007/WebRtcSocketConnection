@@ -1,5 +1,6 @@
 package com.example.socketconnectionwebrtc.WebRtc;
 
+import org.json.JSONObject;
 import org.webrtc.IceCandidate;
 import org.webrtc.PeerConnection;
 import org.webrtc.SessionDescription;
@@ -51,7 +52,6 @@ public interface WebRtcInterface {
             this.iceServer = iceServer;
             this.initiator = initiator;
             this.clientId = clientId;
-
             this.offerSdp = offerSdp;
             this.iceCandidates = iceCandidates;
         }
@@ -76,7 +76,7 @@ public interface WebRtcInterface {
 
     interface sendingMessage {
 
-        void sendSdp(SessionDescription offerMessage);
+        void sendSdp(JSONObject jsonObject);
 
     }
 }

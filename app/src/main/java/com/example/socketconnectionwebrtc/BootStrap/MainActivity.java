@@ -31,9 +31,9 @@ import com.example.socketconnectionwebrtc.Model.OfferMessage;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
 import com.example.socketconnectionwebrtc.R;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
-import com.example.socketconnectionwebrtc.WebRtc.ConnectionState;
 import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionClient;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcClient;
+import com.example.socketconnectionwebrtc.WebRtc.WebRtcConnect;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -45,10 +45,12 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
 import org.webrtc.EglBase;
 import org.webrtc.IceCandidate;
 import org.webrtc.Logging;
 import org.webrtc.MediaStream;
+import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
 import org.webrtc.SessionDescription;
 import org.webrtc.StatsReport;
@@ -60,12 +62,14 @@ import org.webrtc.VideoSink;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static android.nfc.NfcAdapter.EXTRA_ID;
 
 
 public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcListener
-        , PeerConnectionClient.PeerConnectionEvents, WebRtcInterface.sendingMessage {
+        , PeerConnectionClient.PeerConnectionEvents, WebRtcInterface.sendingMessage, WebRtcConnect.onSending {
     public static final String EXTRA_VIDEO_WIDTH = "org.appspot.apprtc.VIDEO_WIDTH";
     public static final String EXTRA_VIDEO_HEIGHT = "org.appspot.apprtc.VIDEO_HEIGHT";
     private boolean commandLineRun;
@@ -111,7 +115,8 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
     private MyViewModel myViewModel;
     private SocketConnectionHandler socketConnectionHandler;
     public static final String EXTRA_TRACING = "org.appspot.apprtc.TRACING";
-
+    private static final String stunServer = "stun:firstlineconnect.com";
+    private static final String turnServer = "turn:firstlineconnect.com";
     private final ProxyVideoSink remoteProxyRenderer = new ProxyVideoSink();
     private final ProxyVideoSink localProxyVideoSink = new ProxyVideoSink();
     private TextureView textureView;
@@ -119,10 +124,22 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
     private WebRtcInterface.SignalingEvents events;
     @Nullable
     private PeerConnectionClient.PeerConnectionParameters peerConnectionParameters;
-    @Nullable
     private PeerConnectionClient peerConnectionClient;
     Gson gson = new Gson();
     final EglBase eglBase = EglBase.create();
+    private static final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    @Override
+    public void sendMessageString() {
+
+
+    }
+
+    @Override
+    public void sendMessageJson() {
+
+    }
+
 
     public interface messageToWebRtcClient {
         void messageToWebRTC(String Message);
@@ -137,7 +154,6 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
                 Logging.d(TAG, "Dropping frame in proxy because target is null.");
                 return;
             }
-
             target.onFrame(frame);
         }
     }
@@ -158,10 +174,15 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
             Log.d(TAG, "onCreate: " + newName);
             Log.d(TAG, "onCreate: HVAD ER NEWNAME" + newName);
             //TODO FIX DIALOG SÅ HVERGANG MAN KLIKKER IKKE SPAMMER DET SAMME
+
             dialog(newName);
 
 
         };
+
+
+        startCamera();
+
         final Observer<String> webRtcObserver = newWebRTCMessage -> {
             Log.d(TAG, "onCreate: Does it worK?");
             Point display = new Point();
@@ -169,8 +190,6 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
             Log.d(TAG, "onCreate: " + newWebRTCMessage);
 
             decider(newWebRTCMessage);
-
-
         };
 
 
@@ -220,31 +239,42 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setHasFixedSize(true);
 
-
         final Adapter adapter = new Adapter();
         recyclerView.setAdapter(adapter);
-
-
-        //auth = FirebaseAuth.getInstance();
-        textureView = findViewById(R.id.view_finder1);
-
-
-        ConnectToSocket();
-
-
-        try {
-            startCamera();
-        } catch (Exception e) {
-            Log.d(TAG, "onCreate: " + e);
-        }
 
         // Create peer connection client.
         peerConnectionClient = new PeerConnectionClient(
                 getApplicationContext(), eglBase, peerConnectionParameters, MainActivity.this);
         PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
-        options.networkIgnoreMask = 0;
-
+        if (loopback) {
+            options.networkIgnoreMask = 0;
+        }
         peerConnectionClient.createPeerConnectionFactory(options);
+
+        //auth = FirebaseAuth.getInstance();
+        textureView = findViewById(R.id.view_finder1);
+
+        ConnectToSocket();
+        inistializeWebRtcClient();
+
+
+    }
+
+    public void inistializeWebRtcClient() {
+        Log.d(TAG, "inistializeWebRtcClient: Rammer Vi her Inistailiza WebRTCCLIENT");
+        ArrayList<PeerConnection.IceServer> iceServers = new ArrayList();
+        iceServers.add(PeerConnection.IceServer.builder(stunServer).createIceServer());
+        iceServers.add(PeerConnection.IceServer.builder(turnServer).setUsername("u").setPassword("p").createIceServer());
+
+        WebRtcInterface.SignalingParameters param = new WebRtcInterface.SignalingParameters(
+                iceServers,
+                false,
+                null,
+                null,
+                null
+        );
+        onConnectedToRoomInternal(param);
+
 
     }
 
@@ -269,14 +299,17 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
 
                 SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm(unCoverMessageToWebRTC.getPayload().getType()), unCoverMessageToWebRTC.getPayload().getSdp());
 
-                WebRtcInterface.SignalingParameters parameters  = new WebRtcInterface.SignalingParameters(
+                WebRtcInterface.SignalingParameters parameters = new WebRtcInterface.SignalingParameters(
                         new ArrayList<>(),
                         false,
                         null,
                         sdp,
                         null
                 );
-                onCreatingAnswerSdp(parameters);
+                onConnectedToRoomInternal(parameters);
+
+
+                //onCreatingAnswerSdp(parameters);
 
 
                 break;
@@ -287,6 +320,9 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
                 //SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm(message), newJson.get("sdp").toString());
                 //signalingEvents.onRemoteDescription(sdp);
                 break;
+            case joinedRoomParticipant:
+                Log.d(TAG, "decider: JOINEDROOMPARTICIPANT");
+
 
         }
     }
@@ -299,26 +335,32 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
 
 
     private void onConnectedToRoomInternal(final WebRtcInterface.SignalingParameters params) {
+        Log.d(TAG, "onConnectedToRoomInternal: OnconnecToRoomInternal");
         signalingParameters = params;
         VideoCapturer videoCapturer = null;
 
+
         if (peerConnectionParameters.videoCallEnabled) {
+            Log.d(TAG, "onConnectedToRoomInternal: Start Camera");
             startCamera();
         }
 
-        peerConnectionClient.createPeerConnection(localProxyVideoSink, remoteSinks, videoCapturer, signalingParameters);
+        peerConnectionClient.createPeerConnection(
+                localProxyVideoSink, remoteSinks, videoCapturer, signalingParameters);
 
-        if (true) {
+        if (params.initiator) {
             Log.d(TAG, "onConnectedToRoomInternal: CREATING OFFER");
             peerConnectionClient.createOffer();
         } else {
             if (params.offerSdp != null) {
+                Log.d(TAG, "onConnectedToRoomInternal: Offer Sdp");
                 peerConnectionClient.setRemoteDescription(params.offerSdp);
-                peerConnectionClient.createAnswer();
+                //peerConnectionClient.createAnswer();
             }
             if (params.iceCandidates != null) {
+                Log.d(TAG, "onConnectedToRoomInternal: iceCandidates");
                 for (IceCandidate iceCandidate : params.iceCandidates) {
-                    peerConnectionClient.addRemoteiceCandidate(iceCandidate);
+                    peerConnectionClient.addRemoteIceCandidate(iceCandidate);
                 }
             }
         }
@@ -344,28 +386,12 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
 
                         socketConnectionHandler.sendMessageToSocket(new BaseMessage(MessageType.acceptCall, new RoomDetails("+4529933087", "Steffen")));
                         //TODO SIGNALING PARAMETERS NULLPOINTER
-                        onConnectedToRoomInternal(signalingParameters);
-                }
+
+                    }
 
                 }).show();
     }
 
-    public void onTCPConnected(boolean isServer) {
-        if (isServer) {
-
-
-            WebRtcInterface.SignalingParameters parameters = new WebRtcInterface.SignalingParameters(
-                    // Ice servers are not needed for direct connections.
-                    new ArrayList<>(),
-                    isServer, // Server side acts as the initiator on direct connections.
-                    null, // clientId
-                    null, // wssUrl
-                    null // wwsPostUrl
-
-            );
-           events.onConnectedToRoom(parameters);
-        }
-    }
     public void startCamera() {
         Log.d(TAG, "startCamera: Inside StartCamera");
         CameraX.unbindAll();
@@ -548,17 +574,25 @@ public class MainActivity extends AppCompatActivity implements WebRtcClient.RtcL
         logToast.show();
     }
 
-    public void sendSdp(SessionDescription jsonObject) {
+    public void sendSdp(JSONObject jsonObject) {
+        Log.d(TAG, "sendSdp: Rammer VI her SendSDp");
         socketConnectionHandler.sendMessageToSocketFromOffer(jsonObject);
+
     }
 
     public void sendMesssage(String messasge) {
         socketConnectionHandler.sendMessageToSocket(messasge);
     }
 
+
     @Override
     public void onLocalDescription(SessionDescription sdp) {
+        Log.d(TAG, "onLocalDescription: Hallo");
+            runOnUiThread(() ->{
+                Log.d(TAG, "onLocalDescription: Hva så?");
+                webRtcClient.sendAnswerSdp(sdp);
 
+            });
     }
 
     @Override

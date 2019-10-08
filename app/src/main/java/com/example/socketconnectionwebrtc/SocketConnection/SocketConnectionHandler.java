@@ -7,11 +7,14 @@ import com.example.socketconnectionwebrtc.Model.BaseMessage;
 import com.example.socketconnectionwebrtc.Enum.MessageType;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.neovisionaries.ws.client.WebSocket;
 import com.neovisionaries.ws.client.WebSocketAdapter;
 import com.neovisionaries.ws.client.WebSocketException;
 import com.neovisionaries.ws.client.WebSocketFactory;
-import org.webrtc.SessionDescription;
+
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -99,9 +102,11 @@ public class SocketConnectionHandler  {
         }
 
     }
-    public void sendMessageToSocketFromOffer(SessionDescription offerMessage) {
+    public void sendMessageToSocketFromOffer(JSONObject offerMessage) {
         Log.d(TAG, "sendMessageToSocketFromOffer: Sending Sdp To Socket");
-        wss.sendText(String.valueOf(offerMessage));
+
+        String toJson = gson.toJson(offerMessage);
+        wss.sendText(toJson);
     }
 
 
