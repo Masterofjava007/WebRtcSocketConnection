@@ -3,6 +3,7 @@ package com.example.socketconnectionwebrtc.WebRtc;
 import android.content.Context;
 import android.opengl.EGLContext;
 import android.os.Environment;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -27,6 +28,8 @@ import org.webrtc.VideoTrack;
 import org.webrtc.*;
 import org.webrtc.audio.AudioDeviceModule;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -86,19 +89,19 @@ public class PeerConnectionClient {
     private MediaConstraints audioConstraints;
     private MediaConstraints sdpMediaConstraints = new MediaConstraints();
     private boolean preferIsac;
-    private MainActivity main = new MainActivity();
+
 
     public void setRemoteDescription(SessionDescription offerSdp) {
+
         Log.d(TAG, "setRemoteDescription: SetRemoteDescription");
-        executor.execute(() -> {
-            if (peerConnection == null || isError) {
+        //executor.execute(() -> {
+            if (this.peerConnection == null || isError) {
                 Log.d(TAG, "setRemoteDescription: PeerConnection == null");
                 return;
             }
-            String sdpDescription = offerSdp.description;
-            SessionDescription sdpRemote = new SessionDescription(offerSdp.type, sdpDescription);
-            peerConnection.setRemoteDescription(sdpObserver, sdpRemote);
-        });
+
+            this.peerConnection.setRemoteDescription(this.sdpObserver, offerSdp);
+        //});
     }
 
     public void addRemoteIceCandidate(IceCandidate iceCandidate) {
@@ -200,7 +203,7 @@ public class PeerConnectionClient {
 
         final String fieldTrials = getFieldTrials(peerConnectionParameters);
 
-        executor.execute(() -> {
+        //executor.execute(() -> {
             PeerConnectionFactory.initialize(
                     PeerConnectionFactory.InitializationOptions.builder(appContext)
                             .setFieldTrials(fieldTrials)
@@ -209,7 +212,7 @@ public class PeerConnectionClient {
             );
 
             Log.d(TAG, "PeerConnectionClient: Field Trails" + fieldTrials);
-        });
+       // });
     }
 
 
@@ -248,16 +251,9 @@ public class PeerConnectionClient {
         this.remoteSinks = remoteSinks;
         this.videoCapturer = videoCapturer;
         this.signalingParameters = signalingParameters;
-        executor.execute(() -> {
-            try {
-                createMediaConstraintsInternal();
-                createPeerConnectionInternal();
-                //TODO HAVE REMOVED EVENTLOG
-            } catch (Exception e) {
 
-                throw e;
-            }
-        });
+        createMediaConstraintsInternal();
+        createPeerConnectionInternal();
     }
 
     private void createPeerConnectionInternal() {
@@ -283,7 +279,7 @@ public class PeerConnectionClient {
         rtcConfig.enableDtlsSrtp = !peerConnectionParameters.loopback;
         rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN;
 
-        peerConnection = factory.createPeerConnection(rtcConfig, (PeerConnection.Observer) pcObserver);
+        peerConnection = factory.createPeerConnection(rtcConfig, pcObserver);
 
         if (dataChannelEnabled) {
             DataChannel.Init init = new DataChannel.Init();
@@ -307,6 +303,20 @@ public class PeerConnectionClient {
             remoteVideoTrack.setEnabled(renderVideo);
             for (VideoSink remoteSink : remoteSinks) {
                 remoteVideoTrack.addSink((VideoSink) remoteSinks);
+            }
+        }
+
+
+        if (peerConnectionParameters.aecDump) {
+            try {
+                ParcelFileDescriptor aecDumpFileDescriptor =
+                        ParcelFileDescriptor.open(new File(Environment.getExternalStorageDirectory().getPath()
+                                        + File.separator + "Download/audio.aecdump"),
+                                ParcelFileDescriptor.MODE_READ_WRITE | ParcelFileDescriptor.MODE_CREATE
+                                        | ParcelFileDescriptor.MODE_TRUNCATE);
+                factory.startAecDump(aecDumpFileDescriptor.detachFd(), -1);
+            } catch (IOException e) {
+                Log.e(TAG, "Can not open aecdump file", e);
             }
         }
 
@@ -408,13 +418,14 @@ public class PeerConnectionClient {
 
     public void createAnswer() {
 
-            peerConnection.createAnswer(sdpObserver, sdpMediaConstraints);
+        peerConnection.createAnswer(sdpObserver, sdpMediaConstraints);
 
     }
 
     private class SDPObserver implements SdpObserver {
         @Override
         public void onCreateSuccess(SessionDescription sessionDescription) {
+            Log.d(TAG, "onCreateSuccess: Hallo1");
             if (localSdp != null) {
                 Log.d(TAG, "onCreateSuccess: MULTIPLE SdP");
                 return;
@@ -432,6 +443,7 @@ public class PeerConnectionClient {
 
         @Override
         public void onSetSuccess() {
+            Log.d(TAG, "onSetSuccess: Hallo");
             executor.execute(() -> {
                         if (peerConnection == null || isError) {
                             Log.d(TAG, "onSetSuccess: PeerConnection equel null");

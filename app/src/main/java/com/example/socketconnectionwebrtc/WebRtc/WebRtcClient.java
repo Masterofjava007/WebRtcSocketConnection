@@ -130,30 +130,6 @@ public class WebRtcClient implements WebRtcInterface {
     }
 
 
-    public interface RtcListener {
-        void onCallReady(String callId);
-
-        void onStatusChanged(String newStatus);
-
-        void onLocalStream(MediaStream localStream);
-
-        void onAddRemoteStream(MediaStream remoteStream, int endPoint);
-
-        void onRemoveRemoteStream(int endPoint);
-    }
-
-    private interface Command {
-        void execute(String peerid, JsonObject jsonPayload) throws JSONException;
-
-    }
-
-    public void sendMessage(String to, String type, JSONObject payload) throws JSONException {
-        JSONObject message = new JSONObject();
-        message.put("to", to);
-        message.put("type", type);
-        message.put("payload", payload);
-        // socketConnectionHandler.sendMessageToSocket("eventMessage", message);
-    }
 
 
     //TODO See if we capture frame from main
