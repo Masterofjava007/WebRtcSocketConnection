@@ -27,8 +27,7 @@ import static com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface.*;
 public class WebRtcClient implements WebRtcInterface {
     private static final String TAG = "WebRtcClient";
     private MediaConstraints pcConstraints = new MediaConstraints();
-    @Nullable
-    private PeerConnectionClient peerConnectionClient;
+
     private final static int MAX_PEER = 2;
 
 

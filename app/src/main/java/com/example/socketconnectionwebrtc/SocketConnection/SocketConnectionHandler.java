@@ -107,12 +107,14 @@ public class SocketConnectionHandler  {
 
         String toJson = gson.toJson(offerMessage);
         wss.sendText(toJson);
+
     }
 
 
     public void sendMessageToSocket(String message) {
         Log.d(TAG, "sendMessageToSocket: WebRtcClient sending to socket");
             wss.sendText(message);
+        Log.d(TAG, "sendMessageToSocket: sending" + message);
 
 
     }
