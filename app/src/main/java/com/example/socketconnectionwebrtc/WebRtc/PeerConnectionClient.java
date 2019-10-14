@@ -3,21 +3,46 @@ package com.example.socketconnectionwebrtc.WebRtc;
 import android.content.Context;
 import android.util.Log;
 
+import com.example.socketconnectionwebrtc.RecorderAudioToFileController.RecordedAudioToFileController;
+
 import org.jetbrains.annotations.Nullable;
 import org.webrtc.DataChannel;
+import org.webrtc.DefaultVideoDecoderFactory;
+import org.webrtc.DefaultVideoEncoderFactory;
 import org.webrtc.EglBase;
 import org.webrtc.IceCandidate;
+import org.webrtc.MediaConstraints;
 import org.webrtc.MediaStream;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
 import org.webrtc.RtpReceiver;
 import org.webrtc.SdpObserver;
 import org.webrtc.SessionDescription;
+import org.webrtc.SoftwareVideoDecoderFactory;
+import org.webrtc.SoftwareVideoEncoderFactory;
+import org.webrtc.VideoCapturer;
+import org.webrtc.VideoDecoderFactory;
+import org.webrtc.VideoEncoderFactory;
+import org.webrtc.audio.AudioDeviceModule;
+import org.webrtc.audio.JavaAudioDeviceModule;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class PeerConnectionClient {
+    private MediaConstraints audioConstraints;
+    private MediaConstraints sdpMediaConstraints;
+    private static final String AUDIO_ECHO_CANCELLATION_CONSTRAINT = "googEchoCancellation";
+    private static final String AUDIO_AUTO_GAIN_CONTROL_CONSTRAINT = "googAutoGainControl";
+    private static final String AUDIO_HIGH_PASS_FILTER_CONSTRAINT = "googHighpassFilter";
+    private static final String AUDIO_NOISE_SUPPRESSION_CONSTRAINT = "googNoiseSuppression";
+    private static final String VIDEO_CODEC_H264_HIGH = "H264 High";
     private static final String VIDEO_VP8_INTEL_HW_ENCODER_FIELDTRIAL = "WebRTC-IntelVP8/Enabled/";
     private static final String VIDEO_FLEXFEC_FIELDTRIAL =
             "WebRTC-FlexFEC-03-Advertised/Enabled/WebRTC-FlexFEC-03/Enabled/";
@@ -29,7 +54,8 @@ public class PeerConnectionClient {
     private static final String AUDIO_CODEC_ISAC = "ISAC";
 
     private final PCObserver pcObserver = new PCObserver();
-
+    @Nullable
+    private VideoCapturer videoCapturer;
     @Nullable
     private SessionDescription localSdp;
     @Nullable
@@ -38,6 +64,8 @@ public class PeerConnectionClient {
     private PeerConnectionFactory factory;
     @Nullable
     private PeerConnection peerConnection;
+    @Nullable
+    private RecordedAudioToFileController saveRecordedAudioToFile;
 
     private final SDPObserver sdpObserver = new SDPObserver();
     private final EglBase rootEglBase;
@@ -47,6 +75,7 @@ public class PeerConnectionClient {
     private final boolean dataChannelEnabled;
     private WebRtcInterface.SignalingParameters signalingParameters;
     private boolean preferIsac;
+    private boolean isInitiator;
 
 
     public static class DataChannelParameters {
@@ -149,12 +178,24 @@ public class PeerConnectionClient {
         this.signalingParameters = signalingParameters;
 
         try {
+            createMediaConstraintsInternal();
             createPeerConnectionInternal();
         } catch (Exception e) {
             throw e;
         }
 
     }
+
+    public void createAnswer() {
+        executor.execute(() -> {
+            if (peerConnection != null) {
+                Log.d(TAG, "PC create ANSWER");
+                isInitiator = false;
+                peerConnection.createAnswer(sdpObserver, sdpMediaConstraints);
+            }
+        });
+    }
+
 
     public void createPeerConnectionFactory(PeerConnectionFactory.Options options) {
 
@@ -198,9 +239,75 @@ public class PeerConnectionClient {
     private void createPeerConnectionFactoryInternal(PeerConnectionFactory.Options options) {
         Log.d(TAG, "createPeerConnectionFactoryInternal: Entered CreatePeerOCnnectionFactory INternal");
 
+        preferIsac = peerConnectionParameters.audioCodec != null && peerConnectionParameters.audioCodec.equals(AUDIO_CODEC_ISAC);
+        final boolean enableH264HighProfile =
+                VIDEO_CODEC_H264_HIGH.equals(peerConnectionParameters.videoCodec);
+        final VideoEncoderFactory encoderFactory;
+        final VideoDecoderFactory decoderFactory;
+        final AudioDeviceModule adm = createAudioJavaDevice();
+
+        if (peerConnectionParameters.videoCodecHwAcceleration) {
+            encoderFactory = new DefaultVideoEncoderFactory(
+                    rootEglBase.getEglBaseContext(), true /* enableIntelVp8Encoder */, enableH264HighProfile);
+            decoderFactory = new DefaultVideoDecoderFactory(rootEglBase.getEglBaseContext());
+        } else {
+            encoderFactory = new SoftwareVideoEncoderFactory();
+            decoderFactory = new SoftwareVideoDecoderFactory();
+        }
+
+
         factory = PeerConnectionFactory.builder().setOptions(options)
+                .setAudioDeviceModule(adm).setVideoDecoderFactory(decoderFactory).setVideoEncoderFactory(encoderFactory)
                 .createPeerConnectionFactory();
         Log.d(TAG, "createPeerConnectionFactoryInternal: peerConnectionFactory Created");
+    }
+
+    AudioDeviceModule createAudioJavaDevice() {
+        if (!peerConnectionParameters.useOpenSLES) {
+
+        }
+        JavaAudioDeviceModule.AudioRecordErrorCallback audioRecordErrorCallback = new JavaAudioDeviceModule.AudioRecordErrorCallback() {
+            @Override
+            public void onWebRtcAudioRecordInitError(String s) {
+                Log.d(TAG, "onWebRtcAudioRecordInitError: " + s);
+            }
+
+            @Override
+            public void onWebRtcAudioRecordStartError(JavaAudioDeviceModule.AudioRecordStartErrorCode audioRecordStartErrorCode, String s) {
+
+            }
+
+            @Override
+            public void onWebRtcAudioRecordError(String s) {
+
+            }
+        };
+        JavaAudioDeviceModule.AudioTrackErrorCallback audioTrackErrorCallback = new JavaAudioDeviceModule.AudioTrackErrorCallback() {
+            @Override
+            public void onWebRtcAudioTrackInitError(String s) {
+
+            }
+
+            @Override
+            public void onWebRtcAudioTrackStartError(JavaAudioDeviceModule.AudioTrackStartErrorCode audioTrackStartErrorCode, String s) {
+
+            }
+
+            @Override
+            public void onWebRtcAudioTrackError(String s) {
+
+            }
+
+        };
+
+        return JavaAudioDeviceModule.builder(appContext)
+                .setSamplesReadyCallback(saveRecordedAudioToFile)
+                .setUseHardwareAcousticEchoCanceler(!peerConnectionParameters.disableBuiltInAEC)
+                .setUseHardwareNoiseSuppressor(!peerConnectionParameters.disableBuiltInNS)
+                .setAudioRecordErrorCallback(audioRecordErrorCallback)
+                .setAudioTrackErrorCallback(audioTrackErrorCallback)
+                .createAudioDeviceModule();
+
     }
 
     public interface PeerConnectionEvents {
@@ -210,21 +317,21 @@ public class PeerConnectionClient {
     }
 
     public void settingRemoteDescription(final SessionDescription sdp) {
-
-        Log.d(TAG, "settingRemoteDescription: Hitting");
         String sdpDescription = sdp.description;
 
+        Log.d(TAG, "settingRemoteDescription: Hitting");
+        try {
 
-        executor.execute(()->{
+            localSdp = sdp;
+            SessionDescription sdpRemote = new SessionDescription(sdp.type, sdpDescription);
+            peerConnection.setRemoteDescription(sdpObserver, sdpRemote);
 
-        SessionDescription sdpRemote = new SessionDescription(sdp.type, sdpDescription);
-        peerConnection.setRemoteDescription(sdpObserver, sdpRemote);
-        Log.d(TAG, "settingRemoteDescription: " + sdpRemote.toString());
-
-
-        Log.d(TAG, "settingRemoteDescription: done");
-        });
+            Log.d(TAG, "settingRemoteDescription: done");
+        }catch (Exception e){
+            Log.d(TAG, "settingRemoteDescription: Something have Catched  " );
+        }
     }
+
 
     private class PCObserver implements PeerConnection.Observer {
 
@@ -287,16 +394,23 @@ public class PeerConnectionClient {
     private class SDPObserver implements SdpObserver {
         @Override
         public void onCreateSuccess(SessionDescription origSdp) {
-            Log.d(TAG, "onCreateSuccess: sdpRemote Rammer Her");
+            if (localSdp != null) {
+                Log.d(TAG, "onCreateSuccess: ");
+                return;
+            }
             String sdpDescription = origSdp.description;
+            if (preferIsac) {
+                Log.d(TAG, "onCreateSuccess: PreferIsac is true");
+            }
 
             final SessionDescription sdp = new SessionDescription(origSdp.type, sdpDescription);
             localSdp = sdp;
-
-            if (peerConnection != null) {
-                peerConnection.setLocalDescription(sdpObserver, sdp);
-            }
-
+            executor.execute(() -> {
+                if (peerConnection != null) {
+                    Log.d(TAG, "Set local SDP from " + sdp.type);
+                    peerConnection.setLocalDescription(sdpObserver, sdp);
+                }
+            });
         }
 
         @Override
@@ -304,7 +418,6 @@ public class PeerConnectionClient {
             Log.d(TAG, "onSetSuccess: sdpRemote Rammer her");
 
             events.onLocalDescription(localSdp);
-
 
         }
 
@@ -333,4 +446,51 @@ public class PeerConnectionClient {
         }
         return fieldTrials;
     }
+
+
+    private static int findMediaDescriptionLine(boolean isAudio, String[] sdpLines) {
+        final String mediaDescription = isAudio ? "m=audio " : "m=video ";
+        for (int i = 0; i < sdpLines.length; ++i) {
+            if (sdpLines[i].startsWith(mediaDescription)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+
+    private void createMediaConstraintsInternal() {
+        // Create video constraints if video call is enabled.
+
+        // If video resolution is not specified, default to HD.
+
+
+        // If fps is not specified, default to 30.
+
+        // Create audio constraints.
+        audioConstraints = new MediaConstraints();
+        // added for audio performance measurements
+        if (peerConnectionParameters.noAudioProcessing) {
+            Log.d(TAG, "Disabling audio processing");
+            audioConstraints.mandatory.add(
+                    new MediaConstraints.KeyValuePair(AUDIO_ECHO_CANCELLATION_CONSTRAINT, "false"));
+            audioConstraints.mandatory.add(
+                    new MediaConstraints.KeyValuePair(AUDIO_AUTO_GAIN_CONTROL_CONSTRAINT, "false"));
+            audioConstraints.mandatory.add(
+                    new MediaConstraints.KeyValuePair(AUDIO_HIGH_PASS_FILTER_CONSTRAINT, "false"));
+            audioConstraints.mandatory.add(
+                    new MediaConstraints.KeyValuePair(AUDIO_NOISE_SUPPRESSION_CONSTRAINT, "false"));
+        }
+        // Create SDP constraints.
+        sdpMediaConstraints = new MediaConstraints();
+        sdpMediaConstraints.mandatory.add(
+                new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
+        sdpMediaConstraints.mandatory.add(new MediaConstraints.KeyValuePair(
+                "OfferToReceiveVideo", Boolean.toString(isVideoCallEnabled())));
+    }
+
+    private boolean isVideoCallEnabled() {
+        return peerConnectionParameters.videoCallEnabled && videoCapturer != null;
+    }
+
 }

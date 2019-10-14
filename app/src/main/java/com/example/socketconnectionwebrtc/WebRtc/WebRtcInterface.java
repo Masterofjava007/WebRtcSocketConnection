@@ -73,10 +73,4 @@ public interface WebRtcInterface {
         void onChannelError(final String description);
 
     }
-
-    interface sendingMessage {
-
-        void sendSdp(JSONObject jsonObject);
-
-    }
 }

@@ -1,32 +1,25 @@
 package com.example.socketconnectionwebrtc.WebRtc;
 
 
-import android.os.Handler;
 import android.util.Log;
 
-import androidx.annotation.Nullable;
-
-import com.example.socketconnectionwebrtc.Enum.MessageType;
-import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
-import com.example.socketconnectionwebrtc.Model.OfferMessage;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.IceCandidate;
 import org.webrtc.MediaConstraints;
-import org.webrtc.MediaStream;
 import org.webrtc.SessionDescription;
-import org.webrtc.StatsReport;
 
-import static com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 public class WebRtcClient implements WebRtcInterface {
     private static final String TAG = "WebRtcClient";
     private MediaConstraints pcConstraints = new MediaConstraints();
+    private final ExecutorService executor;
 
     private final static int MAX_PEER = 2;
 
@@ -44,6 +37,13 @@ public class WebRtcClient implements WebRtcInterface {
     private String messageUrl;
     private String leaveUrl;
     private Gson gson = new Gson();
+
+    public WebRtcClient(SignalingEvents events) {
+        this.events = events;
+
+        executor = Executors.newSingleThreadExecutor();
+        this.roomState = ConnectionState.CONNECTIED;
+    }
 
 
     private void signalingParametersReady(final SignalingParameters signalingParameters) {
@@ -110,7 +110,10 @@ public class WebRtcClient implements WebRtcInterface {
 
     @Override
     public void sendAnswerSdp(SessionDescription sdp) {
+        executor.execute(() -> {
 
+
+        });
     }
 
     @Override

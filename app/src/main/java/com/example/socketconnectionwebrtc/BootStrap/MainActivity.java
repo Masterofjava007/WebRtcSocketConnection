@@ -3,14 +3,12 @@ package com.example.socketconnectionwebrtc.BootStrap;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Point;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.util.Log;
 import android.util.Rational;
 import android.view.Surface;
 import android.view.TextureView;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -24,50 +22,35 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.socketconnectionwebrtc.Enum.MessageType;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
 import com.example.socketconnectionwebrtc.R;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
-
 import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionClient;
-import com.example.socketconnectionwebrtc.WebRtc.WebRtcClient;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcConnect;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
 import com.google.gson.Gson;
-
-
 import android.util.Size;
 import android.graphics.Matrix;
 import android.view.ViewGroup;
 import android.widget.Toast;
-
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.webrtc.EglBase;
-import org.webrtc.IceCandidate;
-import org.webrtc.Logging;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
 import org.webrtc.SessionDescription;
-import org.webrtc.VideoCapturer;
-import org.webrtc.VideoFrame;
-import org.webrtc.VideoSink;
-
-
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import static android.nfc.NfcAdapter.EXTRA_ID;
-import static android.os.AsyncTask.execute;
+
 
 
 public class MainActivity extends AppCompatActivity implements
-        WebRtcInterface.sendingMessage, WebRtcConnect.onSending, PeerConnectionClient.PeerConnectionEvents {
+        WebRtcConnect.onSending, PeerConnectionClient.PeerConnectionEvents {
 
     public static final String EXTRA_VIDEO_WIDTH = "org.appspot.apprtc.VIDEO_WIDTH";
     public static final String EXTRA_VIDEO_HEIGHT = "org.appspot.apprtc.VIDEO_HEIGHT";
@@ -104,7 +87,8 @@ public class MainActivity extends AppCompatActivity implements
     private static final String stunServer = "stun:firstlineconnect.com";
     private static final String turnServer = "turn:firstlineconnect.com";
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
-
+    @Nullable
+    private WebRtcInterface webRtcInterface;
     @Nullable
     private WebRtcInterface.SignalingParameters signalingParameters;
     private int REQUEST_CODE_PERMISSION = 10;
@@ -140,8 +124,9 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     @Override
-    public void onLocalDescription(SessionDescription sdp) {
-
+    public void onLocalDescription(final SessionDescription sdp) {
+        Log.d(TAG, "onLocalDescription: " + sdp);
+        webRtcInterface.sendAnswerSdp(sdp);
     }
 
     @Override
@@ -231,7 +216,7 @@ public class MainActivity extends AppCompatActivity implements
                 .build());
         final Observer<String> joinRoomObeserver = joinRoomObs -> {
             Log.d(TAG, "onCreate: joinRoomObserver");
-            executor.execute(this::inistializeWebRtcClient);
+            //executor.execute(this::inistializeWebRtcClient);
         };
 
         final Observer<String> nameObserver = newName -> {
@@ -243,10 +228,9 @@ public class MainActivity extends AppCompatActivity implements
 
         final Observer<? super WebRtcInterface.SignalingParameters> webRtcObserver = newWebRTCMessage -> {
             Log.d(TAG, "onCreate: WebRTCMessageObserver");
-            executor.execute(() -> {
+            inistializeWebRtcClient();
+            peerConnectionClient.settingRemoteDescription(newWebRTCMessage.offerSdp);
 
-                peerConnectionClient.settingRemoteDescription(newWebRTCMessage.offerSdp);
-            });
         };
 
         // Observe the LiveData, passing in this activity as the LifecycleOwner and the observer.
@@ -255,21 +239,22 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     public void inistializeWebRtcClient() {
-        executor.execute(() -> {
-            Log.d(TAG, "inistializeWebRtcClient: Rammer Vi her Inistailiza WebRTCCLIENT");
-            ArrayList<PeerConnection.IceServer> iceServers = new ArrayList();
-            iceServers.add(PeerConnection.IceServer.builder(stunServer).createIceServer());
-            iceServers.add(PeerConnection.IceServer.builder(turnServer).setUsername("u").setPassword("p").createIceServer());
 
-            WebRtcInterface.SignalingParameters param = new WebRtcInterface.SignalingParameters(
-                    iceServers,
-                    false,
-                    null,
-                    null,
-                    null
-            );
+        Log.d(TAG, "inistializeWebRtcClient: Rammer Vi her Inistailiza WebRTCCLIENT");
+        ArrayList<PeerConnection.IceServer> iceServers = new ArrayList();
+        iceServers.add(PeerConnection.IceServer.builder(stunServer).createIceServer());
+        iceServers.add(PeerConnection.IceServer.builder(turnServer).setUsername("u").setPassword("p").createIceServer());
 
-        });
+        WebRtcInterface.SignalingParameters param = new WebRtcInterface.SignalingParameters(
+                iceServers,
+                false,
+                null,
+                null,
+                null
+        );
+        onConnectedToRoomInternal(param);
+
+
     }
 /*
     public void decider(String message) {
@@ -328,11 +313,6 @@ public class MainActivity extends AppCompatActivity implements
 
         signalingParameters = params;
         peerConnectionClient.createPeerConnection(signalingParameters);
-
-        if (params.offerSdp != null) {
-            Log.d(TAG, "onConnectedToRoomInternal: Offer Sdp");
-
-        }
 
     }
 
