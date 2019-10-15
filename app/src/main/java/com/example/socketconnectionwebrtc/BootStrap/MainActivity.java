@@ -9,6 +9,7 @@ import android.util.Log;
 import android.util.Rational;
 import android.view.Surface;
 import android.view.TextureView;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -22,31 +23,42 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.socketconnectionwebrtc.Enum.MessageType;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
+import com.example.socketconnectionwebrtc.Model.SessionSdp;
+import com.example.socketconnectionwebrtc.Model.sdpAnswer;
 import com.example.socketconnectionwebrtc.R;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
 import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionClient;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcConnect;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonIOException;
+
 import android.util.Size;
 import android.graphics.Matrix;
 import android.view.ViewGroup;
 import android.widget.Toast;
+
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.EglBase;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
 import org.webrtc.SessionDescription;
+
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import static android.nfc.NfcAdapter.EXTRA_ID;
 
+import static android.nfc.NfcAdapter.EXTRA_ID;
 
 
 public class MainActivity extends AppCompatActivity implements
@@ -126,7 +138,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onLocalDescription(final SessionDescription sdp) {
         Log.d(TAG, "onLocalDescription: " + sdp);
-        webRtcInterface.sendAnswerSdp(sdp);
+        sendingSdp(sdp);
     }
 
     @Override
@@ -445,10 +457,38 @@ public class MainActivity extends AppCompatActivity implements
         return true;
     }
 
-    public void sendSdp(JSONObject jsonObject) {
+    public void sendSdp(JSONObject jsonObject) throws JSONException {
         Log.d(TAG, "sendSdp: Rammer VI her SendSDp");
-        socketConnectionHandler.sendMessageToSocketFromOffer(jsonObject);
+        //socketConnectionHandler.sendMessageToSocketFromOffer(String.valueOf(jsonObject));
 
+    }
+
+    public void sendingSdp(SessionDescription sdp) {
+        executor.execute(() -> {
+
+
+                GsonBuilder builder = new GsonBuilder();
+                Gson gsonObject = builder.create();
+
+
+
+                Log.d(TAG, "sendMessageToSocketFromOffer: Sending Sdp To Socket");
+
+                String typeAnswer = "sendAnswer";
+
+                RoomDetails room = new RoomDetails("+4529933087", "Steffen");
+
+            //    sdpAnswer sdpAnswer = new sdpAnswer(typeAnswer, new RoomDetails("+4529933087", "Steffen"), new SessionSdp(sdp));
+                SessionSdp sessionSdp = new SessionSdp("sendAnswer", new RoomDetails("+4529933087", "Steffen"), sdp);
+
+               // Log.d(TAG, "sendingSdp: " + sdpAnswer.toString());
+                try {
+                    socketConnectionHandler.sendMessageToSocketFromOffer(sessionSdp);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+        });
     }
 
     public void sendMesssage(String messasge) {

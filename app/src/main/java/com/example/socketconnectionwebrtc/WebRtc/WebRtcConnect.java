@@ -71,7 +71,11 @@ public interface onSending{
             JSONObject json = new JSONObject();
              jsonPut(json,"sdp", sdp.description);
              jsonPut(json, "type", "answer");
-             mainActivity.sendSdp(json);
+            try {
+                mainActivity.sendSdp(json);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
 
         });
     }

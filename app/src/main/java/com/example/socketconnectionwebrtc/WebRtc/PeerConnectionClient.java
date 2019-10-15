@@ -327,8 +327,8 @@ public class PeerConnectionClient {
             peerConnection.setRemoteDescription(sdpObserver, sdpRemote);
 
             Log.d(TAG, "settingRemoteDescription: done");
-        }catch (Exception e){
-            Log.d(TAG, "settingRemoteDescription: Something have Catched  " );
+        } catch (Exception e) {
+            Log.d(TAG, "settingRemoteDescription: Something have Catched  ");
         }
     }
 
@@ -394,10 +394,6 @@ public class PeerConnectionClient {
     private class SDPObserver implements SdpObserver {
         @Override
         public void onCreateSuccess(SessionDescription origSdp) {
-            if (localSdp != null) {
-                Log.d(TAG, "onCreateSuccess: ");
-                return;
-            }
             String sdpDescription = origSdp.description;
             if (preferIsac) {
                 Log.d(TAG, "onCreateSuccess: PreferIsac is true");
@@ -415,10 +411,25 @@ public class PeerConnectionClient {
 
         @Override
         public void onSetSuccess() {
-            Log.d(TAG, "onSetSuccess: sdpRemote Rammer her");
+            executor.execute(() -> {
+                Log.d(TAG, "onSetSuccess: sdpRemote Rammer her");
+                if (isInitiator) {
+                    if (peerConnection.getRemoteDescription() == null) {
+                        events.onLocalDescription(localSdp);
+                    } else {
+                        drainCandidates();
+                    }
+                } else {
+                    if (peerConnection.getLocalDescription() != null) {
+                        events.onLocalDescription(localSdp);
+                        drainCandidates();
 
-            events.onLocalDescription(localSdp);
-
+                    } else {
+                        Log.d(TAG, "onSetSuccess: Waiting for Answer");
+                        createAnswer();
+                    }
+                }
+            });
         }
 
         @Override
@@ -430,6 +441,9 @@ public class PeerConnectionClient {
         public void onSetFailure(String s) {
             Log.d(TAG, "onSetFailure: sdpRemote Rammer her");
         }
+    }
+
+    private void drainCandidates() {
     }
 
 
