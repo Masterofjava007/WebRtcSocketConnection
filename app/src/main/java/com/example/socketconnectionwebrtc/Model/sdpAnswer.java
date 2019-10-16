@@ -1,44 +1,38 @@
 package com.example.socketconnectionwebrtc.Model;
 
-import com.example.socketconnectionwebrtc.Enum.MessageType;
+public class sdpAnswer<T> {
+    private String roomId;
+    private String userName;
+    T answer;
 
-import org.webrtc.SessionDescription;
-
-public class sdpAnswer<T, E> {
-    private String type;
-    T payload;
-    E answer;
-
-    public sdpAnswer(String type, T payload, E answer) {
-        this.type = type;
-        this.payload = payload;
+    public sdpAnswer(String roomId, String userName, T answer) {
+        this.roomId = roomId;
+        this.userName = userName;
         this.answer = answer;
+
     }
 
-    public sdpAnswer(MessageType answer, RoomDetails steffen, SessionDescription sdp) {
+    public String getRoomId() {
+        return roomId;
     }
 
-    public String getType() {
-        return type;
+    public void setRoomId(String roomId) {
+        this.roomId = roomId;
     }
 
-    public void setType(String type) {
-        this.type = type;
+    public String getUserName() {
+        return userName;
     }
 
-    public T getPayload() {
-        return payload;
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
-    public void setPayload(T payload) {
-        this.payload = payload;
-    }
-
-    public E getAnswer() {
+    public T getanswer() {
         return answer;
     }
 
-    public void setAnswer(E answer) {
-        this.answer = answer;
-    }
+    public void setSdp(T sdp) {
+        this.answer = sdp;
+}
 }

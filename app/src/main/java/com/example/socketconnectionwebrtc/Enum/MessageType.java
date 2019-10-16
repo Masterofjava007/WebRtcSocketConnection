@@ -11,5 +11,7 @@ public enum MessageType  {
     offer,
     init,
     answer,
-    candidate
+    candidate,
+    sendAnswer,
+    receiveCandidate
 }

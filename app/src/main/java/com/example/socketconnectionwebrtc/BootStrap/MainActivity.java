@@ -4,12 +4,10 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.os.StrictMode;
 import android.util.Log;
 import android.util.Rational;
 import android.view.Surface;
 import android.view.TextureView;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,7 +21,6 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.socketconnectionwebrtc.Enum.MessageType;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
@@ -32,38 +29,28 @@ import com.example.socketconnectionwebrtc.Model.sdpAnswer;
 import com.example.socketconnectionwebrtc.R;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
 import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionClient;
-import com.example.socketconnectionwebrtc.WebRtc.WebRtcConnect;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonIOException;
-
 import android.util.Size;
 import android.graphics.Matrix;
 import android.view.ViewGroup;
 import android.widget.Toast;
-
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.EglBase;
+import org.webrtc.IceCandidate;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
 import org.webrtc.SessionDescription;
-
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import static android.nfc.NfcAdapter.EXTRA_ID;
 
-
 public class MainActivity extends AppCompatActivity implements
-        WebRtcConnect.onSending, PeerConnectionClient.PeerConnectionEvents {
-
+         PeerConnectionClient.PeerConnectionEvents, WebRtcInterface.SignalingEvents {
     public static final String EXTRA_VIDEO_WIDTH = "org.appspot.apprtc.VIDEO_WIDTH";
     public static final String EXTRA_VIDEO_HEIGHT = "org.appspot.apprtc.VIDEO_HEIGHT";
     private boolean commandLineRun;
@@ -98,6 +85,8 @@ public class MainActivity extends AppCompatActivity implements
     public static final String EXTRA_ENABLE_RTCEVENTLOG = "org.appspot.apprtc.ENABLE_RTCEVENTLOG";
     private static final String stunServer = "stun:firstlineconnect.com";
     private static final String turnServer = "turn:firstlineconnect.com";
+
+
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     @Nullable
     private WebRtcInterface webRtcInterface;
@@ -108,38 +97,37 @@ public class MainActivity extends AppCompatActivity implements
     private static final String TAG = "MainActivity";
     //private FirebaseAuth mAuth;
     private boolean firstCall = true;
+
     @Nullable
     private PeerConnectionClient.PeerConnectionParameters peerConnectionParameters;
     private MyViewModel myViewModel;
     private SocketConnectionHandler socketConnectionHandler;
     public static final String EXTRA_TRACING = "org.appspot.apprtc.TRACING";
-
-
     private TextureView textureView;
     private WebRtcInterface.SignalingEvents events;
-
+    private SessionSdp sessionSdp;
     @Nullable
     private PeerConnectionClient peerConnectionClient;
     Gson gson = new Gson();
     final EglBase eglBase = EglBase.create();
-
-
-    @Override
-    public void sendMessageString() {
-
-
-    }
-
-    @Override
-    public void sendMessageJson() {
-
-    }
 
     @Override
     public void onLocalDescription(final SessionDescription sdp) {
         Log.d(TAG, "onLocalDescription: " + sdp);
         sendingSdp(sdp);
     }
+
+    @Override
+    public void onIceCandidate(IceCandidate iceCandidate) {
+
+            //ebRtcInterface.se(iceCandidate);
+
+        Log.d(TAG, "onIceCandidate: onIceCandidate");
+    }
+    public void sendIceCandidate(final IceCandidate iceCandidate){
+
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -150,10 +138,8 @@ public class MainActivity extends AppCompatActivity implements
 
         boolean loopback = intent.getBooleanExtra(EXTRA_LOOPBACK, false);
         boolean tracing = intent.getBooleanExtra(EXTRA_TRACING, false);
-
         int videoWidth = intent.getIntExtra(EXTRA_VIDEO_WIDTH, 0);
         int videoHeight = intent.getIntExtra(EXTRA_VIDEO_HEIGHT, 0);
-
 
         myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
 
@@ -181,7 +167,6 @@ public class MainActivity extends AppCompatActivity implements
                     intent.getIntExtra(EXTRA_MAX_RETRANSMITS, -1), intent.getStringExtra(EXTRA_PROTOCOL),
                     intent.getBooleanExtra(EXTRA_NEGOTIATED, false), intent.getIntExtra(EXTRA_ID, -1));
         }
-
         peerConnectionParameters =
                 new PeerConnectionClient.PeerConnectionParameters(intent.getBooleanExtra(EXTRA_VIDEO_CALL, true), loopback,
                         tracing, videoWidth, videoHeight, intent.getIntExtra(EXTRA_VIDEO_FPS, 0),
@@ -201,19 +186,17 @@ public class MainActivity extends AppCompatActivity implements
         commandLineRun = intent.getBooleanExtra(EXTRA_CMDLINE, false);
         int runTimeMs = intent.getIntExtra(EXTRA_RUNTIME, 0);
 
-
         // Create peer connection client.
         peerConnectionClient = new PeerConnectionClient(
                 getApplicationContext(), eglBase, peerConnectionParameters, MainActivity.this);
         PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
-
         peerConnectionClient.createPeerConnectionFactory(options);
 
-
+        //webRtcInterface = new
         //Connection To Socket
         ConnectToSocket();
         //Init WebRtcClient
-
+/*
         StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
                 .detectDiskReads()
                 .detectDiskWrites()
@@ -226,30 +209,27 @@ public class MainActivity extends AppCompatActivity implements
                 .penaltyLog()
                 .penaltyDeath()
                 .build());
-        final Observer<String> joinRoomObeserver = joinRoomObs -> {
-            Log.d(TAG, "onCreate: joinRoomObserver");
-            //executor.execute(this::inistializeWebRtcClient);
-        };
-
+ */
         final Observer<String> nameObserver = newName -> {
             Log.d(TAG, "onCreate: " + newName);
             Log.d(TAG, "onCreate: HVAD ER NEWNAME" + newName);
             //TODO FIX DIALOG SÅ HVERGANG MAN KLIKKER IKKE SPAMMER DET SAMME
             dialog(newName);
         };
-
         final Observer<? super WebRtcInterface.SignalingParameters> webRtcObserver = newWebRTCMessage -> {
             Log.d(TAG, "onCreate: WebRTCMessageObserver");
             inistializeWebRtcClient();
             peerConnectionClient.settingRemoteDescription(newWebRTCMessage.offerSdp);
-
         };
-
+        final Observer<Object> IceCandidateObserver = iceObserver -> {
+            Log.d(TAG, "onCreate: ICE CANDIDATE " + iceObserver);
+        };
         // Observe the LiveData, passing in this activity as the LifecycleOwner and the observer.
         myViewModel.getEventMessage().observe(this, nameObserver);
         myViewModel.getMessageToWebRTC().observe(this, webRtcObserver);
-    }
+        myViewModel.getMessageToWebRTC().observe(this, IceCandidateObserver);
 
+    }
     public void inistializeWebRtcClient() {
 
         Log.d(TAG, "inistializeWebRtcClient: Rammer Vi her Inistailiza WebRTCCLIENT");
@@ -293,7 +273,7 @@ public class MainActivity extends AppCompatActivity implements
                     iceServers.add(PeerConnection.IceServer.builder(stunServer).createIceServer());
                     iceServers.add(PeerConnection.IceServer.builder(turnServer).setUsername("u").setPassword("p").createIceServer());
 
-                    SessionDescription sdp = new SessionDescription(SessionDescription.Type.OFFER, unCoverMessageToWebRTC.getPayload().getSdp());
+                    SessionDescription sdp = new SessionDescription(SessionDescription.Type.OFFER, unCoverMessageToWebRTC.getPayload().getAnswer());
 
                     WebRtcInterface.SignalingParameters parameters = new WebRtcInterface.SignalingParameters(
                             iceServers,
@@ -319,15 +299,19 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 */
-
     private void onConnectedToRoomInternal(final WebRtcInterface.SignalingParameters params) {
         Log.d(TAG, "onConnectedToRoomInternal: OnconnecToRoomInternal");
 
         signalingParameters = params;
         peerConnectionClient.createPeerConnection(signalingParameters);
 
-    }
+        if (params.iceCandidates != null) {
+            for (IceCandidate iceCandidate : params.iceCandidates) {
+                peerConnectionClient.addRemoteIceCandidate(iceCandidate);
+            }
+        }
 
+    }
     private void dialog(String payload) {
         Log.d(TAG, "onCreate: Working");
 
@@ -353,7 +337,6 @@ public class MainActivity extends AppCompatActivity implements
 
                 }).show();
     }
-
     public void startCamera() {
         Log.d(TAG, "startCamera: Inside StartCamera");
         runOnUiThread(() -> {
@@ -388,7 +371,6 @@ public class MainActivity extends AppCompatActivity implements
             Log.d(TAG, "startCamera: CameraStarted");
         });
     }
-
     private void updateTransform() {
 
         Matrix mx = new Matrix();
@@ -423,7 +405,6 @@ public class MainActivity extends AppCompatActivity implements
         mx.postRotate((float) rotationDgr, cx, cy);
         textureView.setTransform(mx);
     }
-
     public void ConnectToSocket() {
         try {
             Log.d(TAG, "ConnectToSocket: Tryinger");
@@ -433,7 +414,6 @@ public class MainActivity extends AppCompatActivity implements
             System.out.println(e);
         }
     }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 
@@ -447,7 +427,6 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
     }
-
     private boolean allPermissionsGranted() {
         for (String permission : REQUIRED_PERMISSIONS) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
@@ -456,43 +435,46 @@ public class MainActivity extends AppCompatActivity implements
         }
         return true;
     }
-
-    public void sendSdp(JSONObject jsonObject) throws JSONException {
+    public void sendSdp(JSONObject jsonObject) {
         Log.d(TAG, "sendSdp: Rammer VI her SendSDp");
         //socketConnectionHandler.sendMessageToSocketFromOffer(String.valueOf(jsonObject));
 
     }
-
     public void sendingSdp(SessionDescription sdp) {
         executor.execute(() -> {
 
+            String sdpType = sdp.type.canonicalForm().toLowerCase();
+            Log.d(TAG, "sendingSdp: " + sdpType);
 
-                GsonBuilder builder = new GsonBuilder();
-                Gson gsonObject = builder.create();
+            Log.d(TAG, "sendMessageToSocketFromOffer: Sending Sdp To Socket");
+            //sdpAnswer sdpAnswer = new sdpAnswer(typeAnswer, new RoomDetails("+4529933087", "Steffen"), new SessionSdp(sdp));
+            BaseMessage baseSdp = new BaseMessage(MessageType.sendAnswer, new sdpAnswer("+4529933087", "Steffen", new SessionSdp(sdpType, sdp.description)));
+
+            String Steffen = gson.toJson(baseSdp);
 
 
-
-                Log.d(TAG, "sendMessageToSocketFromOffer: Sending Sdp To Socket");
-
-                String typeAnswer = "sendAnswer";
-
-                RoomDetails room = new RoomDetails("+4529933087", "Steffen");
-
-            //    sdpAnswer sdpAnswer = new sdpAnswer(typeAnswer, new RoomDetails("+4529933087", "Steffen"), new SessionSdp(sdp));
-                SessionSdp sessionSdp = new SessionSdp("sendAnswer", new RoomDetails("+4529933087", "Steffen"), sdp);
-
-               // Log.d(TAG, "sendingSdp: " + sdpAnswer.toString());
-                try {
-                    socketConnectionHandler.sendMessageToSocketFromOffer(sessionSdp);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+            socketConnectionHandler.sendMessageToSocket(Steffen);
 
         });
     }
-
     public void sendMesssage(String messasge) {
         socketConnectionHandler.sendMessageToSocket(messasge);
+    }
+    @Override
+    public void onRemoteIceCandidate(IceCandidate candidate) {
+        Log.d(TAG, "onRemoteIceCandidate: Rmamer Her med ICeCandidate");
+    }
+    @Override
+    public void onRemoteIceCandidateRemoved(IceCandidate[] candidates) {
+
+    }
+    @Override
+    public void onChannelClose() {
+
+    }
+    @Override
+    public void onChannelError(String description) {
+
     }
 }
 

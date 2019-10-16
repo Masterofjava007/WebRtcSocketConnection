@@ -60,9 +60,7 @@ public interface WebRtcInterface {
 
     interface SignalingEvents {
 
-        void onConnectedToRoom(final SignalingParameters params);
 
-        void onRemoteDescription(final SessionDescription sdp);
 
         void onRemoteIceCandidate(final IceCandidate candidate);
 

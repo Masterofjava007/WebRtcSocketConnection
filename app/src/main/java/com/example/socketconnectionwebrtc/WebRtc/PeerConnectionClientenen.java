@@ -478,7 +478,7 @@ private class SDPObserver implements SdpObserver {
 
     @Override
     public void onSetFailure(String s) {
-        Log.d(TAG, "onSetFailure: setSdp Error" + isError);
+        Log.d(TAG, "onSetFailure: setAnswer Error" + isError);
     }
 }
 

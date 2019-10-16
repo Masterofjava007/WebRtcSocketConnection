@@ -27,13 +27,9 @@ import org.webrtc.audio.AudioDeviceModule;
 import org.webrtc.audio.JavaAudioDeviceModule;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class PeerConnectionClient {
     private MediaConstraints audioConstraints;
@@ -66,6 +62,9 @@ public class PeerConnectionClient {
     private PeerConnection peerConnection;
     @Nullable
     private RecordedAudioToFileController saveRecordedAudioToFile;
+    @Nullable
+    private List<IceCandidate> queuedRemoteCandidates;
+
 
     private final SDPObserver sdpObserver = new SDPObserver();
     private final EglBase rootEglBase;
@@ -154,6 +153,7 @@ public class PeerConnectionClient {
         }
     }
 
+
     public PeerConnectionClient(Context appContext, EglBase eglBase,
                                 PeerConnectionParameters peerConnectionParameters, PeerConnectionEvents events) {
         this.rootEglBase = eglBase;
@@ -206,6 +206,7 @@ public class PeerConnectionClient {
     private void createPeerConnectionInternal() {
 
         Log.d(TAG, "Create peer connection.");
+        queuedRemoteCandidates = new ArrayList<>();
 
         PeerConnection.RTCConfiguration rtcConfig =
                 new PeerConnection.RTCConfiguration(signalingParameters.iceServer);
@@ -313,6 +314,8 @@ public class PeerConnectionClient {
     public interface PeerConnectionEvents {
 
         void onLocalDescription(final SessionDescription sdp);
+        void onIceCandidate(final IceCandidate iceCandidate);
+
 
     }
 
@@ -336,6 +339,12 @@ public class PeerConnectionClient {
     private class PCObserver implements PeerConnection.Observer {
 
         @Override
+        public void onIceCandidate(IceCandidate iceCandidate) {
+            executor.execute(()->
+                    events.onIceCandidate(iceCandidate));
+        }
+
+        @Override
         public void onSignalingChange(PeerConnection.SignalingState signalingState) {
 
         }
@@ -352,11 +361,6 @@ public class PeerConnectionClient {
 
         @Override
         public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {
-
-        }
-
-        @Override
-        public void onIceCandidate(IceCandidate iceCandidate) {
 
         }
 
@@ -505,6 +509,18 @@ public class PeerConnectionClient {
 
     private boolean isVideoCallEnabled() {
         return peerConnectionParameters.videoCallEnabled && videoCapturer != null;
+    }
+
+    public void addRemoteIceCandidate(final IceCandidate candidate) {
+        executor.execute(() -> {
+            if (peerConnection != null) {
+                if (queuedRemoteCandidates != null) {
+                    queuedRemoteCandidates.add(candidate);
+                } else {
+                    peerConnection.addIceCandidate(candidate);
+                }
+            }
+        });
     }
 
 }

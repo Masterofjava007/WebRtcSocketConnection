@@ -14,22 +14,26 @@ import com.example.socketconnectionwebrtc.Model.OfferMessage;
 
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.webrtc.IceCandidate;
 import org.webrtc.PeerConnection;
 import org.webrtc.SessionDescription;
 
 import java.util.ArrayList;
 
 
-
 public class EventHandler {
     private AppCompatActivity mActivity;
-    private String stringType, stringPayload;
 
+    private WebRtcInterface.SignalingEvents events;
 
     private static final String stunServer = "stun:firstlineconnect.com";
     private static final String turnServer = "turn:firstlineconnect.com";
+
     public EventHandler(AppCompatActivity activity) {
         mActivity = activity;
         myViewModel = ViewModelProviders.of(activity).get(MyViewModel.class);
@@ -41,7 +45,7 @@ public class EventHandler {
 
     private static final String TAG = "EventHandler";
 
-    public void messageHandler(String message) {
+    public void messageHandler(String message) throws JSONException {
         Log.d(TAG, "messageHandler: Entered messageHandler");
 
         BaseMessageHandler<InitiaeCallMessage> unCoverMessage = gson.fromJson
@@ -83,64 +87,59 @@ public class EventHandler {
                 break;
             case joinedRoomParticipant:
                 Log.d(TAG, "messageHandler: Entering joinedRoomParticipant");
-                myViewModel.sendingJoinRoomMessage(message);
+               // myViewModel.sendingJoinRoomMessage(message);
 
+                break;
+            case receiveCandidate:
+                JSONObject jsonObject = new JSONObject(message);
+                Log.d(TAG, "messageHandler: RecieveCandidate");
+             //   events.onRemoteIceCandidate(jsonObject);
+                myViewModel.sendingIceCandidate(jsonObject);
                 break;
 
             default:
                 Log.d(TAG, "messageHandler: Entering default");
         }
     }
-        public void decider(String message) {
 
-            Log.d(TAG, "decider: " + message);
+    public void decider(String message) {
 
-            BaseMessageHandler<OfferMessage> unCoverMessageToWebRTC = gson.fromJson
-                    (message, new TypeToken<BaseMessageHandler<OfferMessage>>() {
-                    }.getType());
-            Log.d(TAG, "decider: " + unCoverMessageToWebRTC);
-            String messageType = unCoverMessageToWebRTC.getPayload().getType();
-            Log.d(TAG, "decider: " + messageType);
-            MessageType webRTCEnums = MessageType.valueOf(messageType);
+        BaseMessageHandler<OfferMessage> unCoverMessageToWebRTC = gson.fromJson
+                (message, new TypeToken<BaseMessageHandler<OfferMessage>>() {
+                }.getType());
 
-            switch (webRTCEnums) {
+        String messageType = unCoverMessageToWebRTC.getPayload().getType();
+        MessageType webRTCEnums = MessageType.valueOf(messageType);
 
-                case offer:
+        switch (webRTCEnums) {
+            case offer:
+                ArrayList<PeerConnection.IceServer> iceServers = new ArrayList();
+                iceServers.add(PeerConnection.IceServer.builder(stunServer).createIceServer());
+                iceServers.add(PeerConnection.IceServer.builder(turnServer).setUsername("u").setPassword("p").createIceServer());
 
-                        Log.d(TAG, "decider: Inside Offer");
+                SessionDescription sdp = new SessionDescription(SessionDescription.Type.OFFER, unCoverMessageToWebRTC.getPayload().getSdp());
 
+                WebRtcInterface.SignalingParameters parameters = new WebRtcInterface.SignalingParameters(
+                        iceServers,
+                        false,
+                        null,
+                        sdp,
+                        null
+                );
+                myViewModel.sendingMessageToWebRTC(parameters);
 
-
-                        ArrayList<PeerConnection.IceServer> iceServers = new ArrayList();
-                        iceServers.add(PeerConnection.IceServer.builder(stunServer).createIceServer());
-                        iceServers.add(PeerConnection.IceServer.builder(turnServer).setUsername("u").setPassword("p").createIceServer());
-
-                        SessionDescription sdp = new SessionDescription(SessionDescription.Type.OFFER, unCoverMessageToWebRTC.getPayload().getSdp());
-
-                        WebRtcInterface.SignalingParameters parameters = new WebRtcInterface.SignalingParameters(
-                                iceServers,
-                                false,
-                                null,
-                                sdp,
-                                null
-                        );
-                        myViewModel.sendingMessageToWebRTC(parameters);
-
-
-
-
-                case candidate:
-                    Log.d(TAG, "decider: rammer vi her??????");
-                    break;
-                case answer:
-                    //SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm(message), newJson.get("sdp").toString());
-                    //signalingEvents.onRemoteDescription(sdp);
-                    break;
-                case joinedRoomParticipant:
-                    Log.d(TAG, "decider: JOINEDROOMPARTICIPANT");
-            }
+            case answer:
+                //SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm(message), newJson.get("sdp").toString());
+                //signalingEvents.onRemoteDescription(sdp);
+                break;
+            case joinedRoomParticipant:
+                Log.d(TAG, "decider: JOINEDROOMPARTICIPANT");
         }
+    }
 
+
+    //  events.onRemoteIceCandidate(toJavaCandidate(message));
+    // Converts a JSON candidate to a Java object.
 
 }
 
