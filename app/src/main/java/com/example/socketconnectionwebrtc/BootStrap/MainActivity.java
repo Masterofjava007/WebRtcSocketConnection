@@ -8,6 +8,7 @@ import android.util.Log;
 import android.util.Rational;
 import android.view.Surface;
 import android.view.TextureView;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -21,36 +22,47 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.socketconnectionwebrtc.Enum.MessageType;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
 import com.example.socketconnectionwebrtc.Model.RoomDetails;
 import com.example.socketconnectionwebrtc.Model.SessionSdp;
+import com.example.socketconnectionwebrtc.Model.iceCandidateParamters;
 import com.example.socketconnectionwebrtc.Model.sdpAnswer;
+import com.example.socketconnectionwebrtc.Model.sendIceCandidate;
 import com.example.socketconnectionwebrtc.R;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
 import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionClient;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
 import com.google.gson.Gson;
+
 import android.util.Size;
 import android.graphics.Matrix;
 import android.view.ViewGroup;
 import android.widget.Toast;
+
 import org.jetbrains.annotations.Nullable;
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.EglBase;
 import org.webrtc.IceCandidate;
+import org.webrtc.Logging;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
 import org.webrtc.SessionDescription;
+import org.webrtc.VideoCapturer;
+import org.webrtc.VideoFrame;
+import org.webrtc.VideoSink;
+
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 import static android.nfc.NfcAdapter.EXTRA_ID;
 
 public class MainActivity extends AppCompatActivity implements
-         PeerConnectionClient.PeerConnectionEvents, WebRtcInterface.SignalingEvents {
+        PeerConnectionClient.PeerConnectionEvents, WebRtcInterface.SignalingEvents {
     public static final String EXTRA_VIDEO_WIDTH = "org.appspot.apprtc.VIDEO_WIDTH";
     public static final String EXTRA_VIDEO_HEIGHT = "org.appspot.apprtc.VIDEO_HEIGHT";
     private boolean commandLineRun;
@@ -85,8 +97,26 @@ public class MainActivity extends AppCompatActivity implements
     public static final String EXTRA_ENABLE_RTCEVENTLOG = "org.appspot.apprtc.ENABLE_RTCEVENTLOG";
     private static final String stunServer = "stun:firstlineconnect.com";
     private static final String turnServer = "turn:firstlineconnect.com";
+    private static class ProxyVideoSink implements VideoSink {
+        private VideoSink target;
 
+        @Override
+        synchronized public void onFrame(VideoFrame frame) {
+            if (target == null) {
+                Logging.d(TAG, "Dropping frame in proxy because target is null.");
+                return;
+            }
 
+            target.onFrame(frame);
+        }
+
+        synchronized public void setTarget(VideoSink target) {
+            this.target = target;
+        }
+    }
+    private final List<VideoSink> remoteSinks = new ArrayList<>();
+
+    private final ProxyVideoSink localProxyVideoSink = new ProxyVideoSink();
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     @Nullable
     private WebRtcInterface webRtcInterface;
@@ -96,8 +126,6 @@ public class MainActivity extends AppCompatActivity implements
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA"};
     private static final String TAG = "MainActivity";
     //private FirebaseAuth mAuth;
-    private boolean firstCall = true;
-
     @Nullable
     private PeerConnectionClient.PeerConnectionParameters peerConnectionParameters;
     private MyViewModel myViewModel;
@@ -119,12 +147,8 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onIceCandidate(IceCandidate iceCandidate) {
-
-            //ebRtcInterface.se(iceCandidate);
-
-        Log.d(TAG, "onIceCandidate: onIceCandidate");
-    }
-    public void sendIceCandidate(final IceCandidate iceCandidate){
+        Log.d(TAG, "onIceCandidate: Trying to go to SendLocalIceCandidate");
+           sendLocalIceCandidate(iceCandidate);
 
     }
 
@@ -159,7 +183,6 @@ public class MainActivity extends AppCompatActivity implements
             e.printStackTrace();
         }
 
-
         PeerConnectionClient.DataChannelParameters dataChannelParameters = null;
         if (intent.getBooleanExtra(EXTRA_DATA_CHANNEL_ENABLED, false)) {
             dataChannelParameters = new PeerConnectionClient.DataChannelParameters(intent.getBooleanExtra(EXTRA_ORDERED, true),
@@ -167,6 +190,7 @@ public class MainActivity extends AppCompatActivity implements
                     intent.getIntExtra(EXTRA_MAX_RETRANSMITS, -1), intent.getStringExtra(EXTRA_PROTOCOL),
                     intent.getBooleanExtra(EXTRA_NEGOTIATED, false), intent.getIntExtra(EXTRA_ID, -1));
         }
+
         peerConnectionParameters =
                 new PeerConnectionClient.PeerConnectionParameters(intent.getBooleanExtra(EXTRA_VIDEO_CALL, true), loopback,
                         tracing, videoWidth, videoHeight, intent.getIntExtra(EXTRA_VIDEO_FPS, 0),
@@ -185,6 +209,7 @@ public class MainActivity extends AppCompatActivity implements
                         intent.getBooleanExtra(EXTRA_ENABLE_RTCEVENTLOG, false), dataChannelParameters);
         commandLineRun = intent.getBooleanExtra(EXTRA_CMDLINE, false);
         int runTimeMs = intent.getIntExtra(EXTRA_RUNTIME, 0);
+
 
         // Create peer connection client.
         peerConnectionClient = new PeerConnectionClient(
@@ -221,15 +246,19 @@ public class MainActivity extends AppCompatActivity implements
             inistializeWebRtcClient();
             peerConnectionClient.settingRemoteDescription(newWebRTCMessage.offerSdp);
         };
-        final Observer<Object> IceCandidateObserver = iceObserver -> {
+        /*
+        final Observer<> IceCandidateObserver = iceObserver -> {
             Log.d(TAG, "onCreate: ICE CANDIDATE " + iceObserver);
+            peerConnectionClient.addRemoteIceCandidate(iceObserver);
         };
+
+         */
         // Observe the LiveData, passing in this activity as the LifecycleOwner and the observer.
         myViewModel.getEventMessage().observe(this, nameObserver);
         myViewModel.getMessageToWebRTC().observe(this, webRtcObserver);
-        myViewModel.getMessageToWebRTC().observe(this, IceCandidateObserver);
-
+        //myViewModel.getMessageToWebRTC().observe(this, IceCandidateObserver);
     }
+
     public void inistializeWebRtcClient() {
 
         Log.d(TAG, "inistializeWebRtcClient: Rammer Vi her Inistailiza WebRTCCLIENT");
@@ -248,70 +277,74 @@ public class MainActivity extends AppCompatActivity implements
 
 
     }
-/*
-    public void decider(String message) {
 
-        Log.d(TAG, "decider: " + message);
+    /*
+        public void decider(String message) {
 
-        BaseMessageHandler<OfferMessage> unCoverMessageToWebRTC = gson.fromJson
-                (message, new TypeToken<BaseMessageHandler<OfferMessage>>() {
-                }.getType());
-        Log.d(TAG, "decider: " + unCoverMessageToWebRTC);
-        String messageType = unCoverMessageToWebRTC.getPayload().getType();
-        Log.d(TAG, "decider: " + messageType);
-        MessageType webRTCEnums = MessageType.valueOf(messageType);
+            Log.d(TAG, "decider: " + message);
 
-        switch (webRTCEnums) {
+            BaseMessageHandler<OfferMessage> unCoverMessageToWebRTC = gson.fromJson
+                    (message, new TypeToken<BaseMessageHandler<OfferMessage>>() {
+                    }.getType());
+            Log.d(TAG, "decider: " + unCoverMessageToWebRTC);
+            String messageType = unCoverMessageToWebRTC.getPayload().getType();
+            Log.d(TAG, "decider: " + messageType);
+            MessageType webRTCEnums = MessageType.valueOf(messageType);
 
-            case offer:
-                executor.execute(() -> {
-                    Log.d(TAG, "decider: Rammer vi her?");
-                  String createMessage = "Steffen";
-                  socketConnectionHandler.sendMessageToSocket(createMessage);
+            switch (webRTCEnums) {
 
-                    ArrayList<PeerConnection.IceServer> iceServers = new ArrayList();
-                    iceServers.add(PeerConnection.IceServer.builder(stunServer).createIceServer());
-                    iceServers.add(PeerConnection.IceServer.builder(turnServer).setUsername("u").setPassword("p").createIceServer());
+                case offer:
+                    executor.execute(() -> {
+                        Log.d(TAG, "decider: Rammer vi her?");
+                      String createMessage = "Steffen";
+                      socketConnectionHandler.sendMessageToSocket(createMessage);
 
-                    SessionDescription sdp = new SessionDescription(SessionDescription.Type.OFFER, unCoverMessageToWebRTC.getPayload().getAnswer());
+                        ArrayList<PeerConnection.IceServer> iceServers = new ArrayList();
+                        iceServers.add(PeerConnection.IceServer.builder(stunServer).createIceServer());
+                        iceServers.add(PeerConnection.IceServer.builder(turnServer).setUsername("u").setPassword("p").createIceServer());
 
-                    WebRtcInterface.SignalingParameters parameters = new WebRtcInterface.SignalingParameters(
-                            iceServers,
-                            false,
-                            null,
-                            sdp,
-                            null
-                    );
+                        SessionDescription sdp = new SessionDescription(SessionDescription.Type.OFFER, unCoverMessageToWebRTC.getPayload().getAnswer());
 
-                });
-                //onCreatingAnswerSdp(parameters);
+                        WebRtcInterface.SignalingParameters parameters = new WebRtcInterface.SignalingParameters(
+                                iceServers,
+                                false,
+                                null,
+                                sdp,
+                                null
+                        );
+
+                    });
+                    //onCreatingAnswerSdp(parameters);
 
 
-            case candidate:
-                Log.d(TAG, "decider: rammer vi her??????");
-                break;
-            case answer:
-                //SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm(message), newJson.get("sdp").toString());
-                //signalingEvents.onRemoteDescription(sdp);
-                break;
-            case joinedRoomParticipant:
-                Log.d(TAG, "decider: JOINEDROOMPARTICIPANT");
+                case candidate:
+                    Log.d(TAG, "decider: rammer vi her??????");
+                    break;
+                case answer:
+                    //SessionDescription sdp = new SessionDescription(SessionDescription.Type.fromCanonicalForm(message), newJson.get("sdp").toString());
+                    //signalingEvents.onRemoteDescription(sdp);
+                    break;
+                case joinedRoomParticipant:
+                    Log.d(TAG, "decider: JOINEDROOMPARTICIPANT");
+            }
         }
-    }
-*/
+    */
     private void onConnectedToRoomInternal(final WebRtcInterface.SignalingParameters params) {
         Log.d(TAG, "onConnectedToRoomInternal: OnconnecToRoomInternal");
 
         signalingParameters = params;
-        peerConnectionClient.createPeerConnection(signalingParameters);
+        VideoCapturer videoCapturer = null;
+
+        peerConnectionClient.createPeerConnection(localProxyVideoSink, remoteSinks, videoCapturer, signalingParameters);
 
         if (params.iceCandidates != null) {
+            Log.d(TAG, "onConnectedToRoomInternal: params.Icecandidates != null");
             for (IceCandidate iceCandidate : params.iceCandidates) {
                 peerConnectionClient.addRemoteIceCandidate(iceCandidate);
             }
         }
-
     }
+
     private void dialog(String payload) {
         Log.d(TAG, "onCreate: Working");
 
@@ -337,6 +370,7 @@ public class MainActivity extends AppCompatActivity implements
 
                 }).show();
     }
+
     public void startCamera() {
         Log.d(TAG, "startCamera: Inside StartCamera");
         runOnUiThread(() -> {
@@ -367,10 +401,11 @@ public class MainActivity extends AppCompatActivity implements
                     .setTargetRotation(getWindowManager().getDefaultDisplay().getRotation()).build();
             final ImageCapture imgCap = new ImageCapture(imgCapConfig);
 
-            CameraX.bindToLifecycle(this, imgCap, preview);
+             CameraX.bindToLifecycle(this, imgCap, preview);
             Log.d(TAG, "startCamera: CameraStarted");
         });
     }
+
     private void updateTransform() {
 
         Matrix mx = new Matrix();
@@ -405,6 +440,7 @@ public class MainActivity extends AppCompatActivity implements
         mx.postRotate((float) rotationDgr, cx, cy);
         textureView.setTransform(mx);
     }
+
     public void ConnectToSocket() {
         try {
             Log.d(TAG, "ConnectToSocket: Tryinger");
@@ -414,6 +450,7 @@ public class MainActivity extends AppCompatActivity implements
             System.out.println(e);
         }
     }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 
@@ -427,6 +464,7 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
     }
+
     private boolean allPermissionsGranted() {
         for (String permission : REQUIRED_PERMISSIONS) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
@@ -435,11 +473,12 @@ public class MainActivity extends AppCompatActivity implements
         }
         return true;
     }
+
     public void sendSdp(JSONObject jsonObject) {
         Log.d(TAG, "sendSdp: Rammer VI her SendSDp");
         //socketConnectionHandler.sendMessageToSocketFromOffer(String.valueOf(jsonObject));
-
     }
+
     public void sendingSdp(SessionDescription sdp) {
         executor.execute(() -> {
 
@@ -457,25 +496,48 @@ public class MainActivity extends AppCompatActivity implements
 
         });
     }
+
     public void sendMesssage(String messasge) {
         socketConnectionHandler.sendMessageToSocket(messasge);
     }
+
+    public void sendLocalIceCandidate(IceCandidate iceCandidate) {
+        Log.d(TAG, "sendLocalIceCandidate: SENDING");
+        executor.execute(()->{
+
+            BaseMessage base = new BaseMessage(MessageType.sendCandidate, new sendIceCandidate("+4529933087", "Steffen", new iceCandidateParamters(iceCandidate.sdp, iceCandidate.sdpMLineIndex, iceCandidate.sdpMid)));
+            Log.d(TAG, "sendLocalIceCandidate: " + base);
+            String Steffen = gson.toJson(base);
+            Log.d(TAG, "sendLocalIceCandidate: " + Steffen);
+            socketConnectionHandler.sendMessageToSocket(Steffen);
+
+        });
+    }
     @Override
     public void onRemoteIceCandidate(IceCandidate candidate) {
-        Log.d(TAG, "onRemoteIceCandidate: Rmamer Her med ICeCandidate");
+        Log.d(TAG, "onRemoteIceCandidate: Rammer Her med ICeCandidate");
+        peerConnectionClient.addRemoteIceCandidate(candidate);
+
     }
+
     @Override
     public void onRemoteIceCandidateRemoved(IceCandidate[] candidates) {
 
     }
+
     @Override
     public void onChannelClose() {
 
     }
+
     @Override
     public void onChannelError(String description) {
 
     }
+
+
+
+
 }
 
 

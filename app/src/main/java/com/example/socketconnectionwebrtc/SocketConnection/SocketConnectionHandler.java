@@ -128,9 +128,12 @@ public class SocketConnectionHandler {
     public void sendMessageToSocket(String message) {
         Log.d(TAG, "sendMessageToSocket: WebRtcClient sending to socket");
         wss.sendText(message);
-        Log.d(TAG, "sendMessageToSocket: sending" + message);
 
 
+    }
+    public void sendJsonObject(JSONObject jsonObject) {
+        Log.d(TAG, "sendJsonObject: " + jsonObject);
+        wss.sendText(jsonObject.toString());
     }
 }
 

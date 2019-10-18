@@ -60,8 +60,6 @@ public interface WebRtcInterface {
 
     interface SignalingEvents {
 
-
-
         void onRemoteIceCandidate(final IceCandidate candidate);
 
         void onRemoteIceCandidateRemoved(final IceCandidate[] candidates);

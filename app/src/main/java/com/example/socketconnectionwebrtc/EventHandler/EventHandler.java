@@ -14,7 +14,6 @@ import com.example.socketconnectionwebrtc.Model.OfferMessage;
 
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
 import org.json.JSONException;
@@ -28,16 +27,16 @@ import java.util.ArrayList;
 
 public class EventHandler {
     private AppCompatActivity mActivity;
-
     private WebRtcInterface.SignalingEvents events;
-
     private static final String stunServer = "stun:firstlineconnect.com";
     private static final String turnServer = "turn:firstlineconnect.com";
 
     public EventHandler(AppCompatActivity activity) {
         mActivity = activity;
         myViewModel = ViewModelProviders.of(activity).get(MyViewModel.class);
+
     }
+
 
     Gson gson = new Gson();
 
@@ -91,11 +90,11 @@ public class EventHandler {
 
                 break;
             case receiveCandidate:
+
                 JSONObject jsonObject = new JSONObject(message);
-                Log.d(TAG, "messageHandler: RecieveCandidate");
-             //   events.onRemoteIceCandidate(jsonObject);
-                myViewModel.sendingIceCandidate(jsonObject);
-                break;
+                Log.d(TAG, "messageHandler: Recieve Candidate");
+                events.onRemoteIceCandidate(toJavaCandidate(jsonObject));
+            break;
 
             default:
                 Log.d(TAG, "messageHandler: Entering default");
@@ -135,6 +134,10 @@ public class EventHandler {
             case joinedRoomParticipant:
                 Log.d(TAG, "decider: JOINEDROOMPARTICIPANT");
         }
+    }
+    private static IceCandidate toJavaCandidate(JSONObject json) throws JSONException {
+        return new IceCandidate(
+                json.getString("id"), json.getInt("label"), json.getString("candidate"));
     }
 
 
