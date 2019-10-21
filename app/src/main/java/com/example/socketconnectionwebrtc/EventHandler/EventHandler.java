@@ -12,6 +12,7 @@ import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
 import com.example.socketconnectionwebrtc.Model.InitiaeCallMessage;
 import com.example.socketconnectionwebrtc.Model.OfferMessage;
 
+import com.example.socketconnectionwebrtc.WebRtc.ConnectionState;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 public class EventHandler {
     private AppCompatActivity mActivity;
     private WebRtcInterface.SignalingEvents events;
+    private ConnectionState roomState;
     private static final String stunServer = "stun:firstlineconnect.com";
     private static final String turnServer = "turn:firstlineconnect.com";
 
@@ -125,6 +127,7 @@ public class EventHandler {
                         sdp,
                         null
                 );
+                roomState = ConnectionState.CONNECTIED;
                 myViewModel.sendingMessageToWebRTC(parameters);
 
             case answer:

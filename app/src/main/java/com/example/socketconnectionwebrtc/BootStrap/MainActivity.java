@@ -1,8 +1,14 @@
 package com.example.socketconnectionwebrtc.BootStrap;
 
+import android.annotation.TargetApi;
+import android.app.Activity;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Camera;
+import android.media.projection.MediaProjection;
+import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Rational;
@@ -17,6 +23,7 @@ import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureConfig;
 import androidx.camera.core.Preview;
 import androidx.camera.core.PreviewConfig;
+import androidx.camera.core.VideoCapture;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
@@ -43,11 +50,14 @@ import android.widget.Toast;
 
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
+import org.webrtc.Camera2Enumerator;
+import org.webrtc.CameraEnumerator;
 import org.webrtc.EglBase;
 import org.webrtc.IceCandidate;
 import org.webrtc.Logging;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
+import org.webrtc.ScreenCapturerAndroid;
 import org.webrtc.SessionDescription;
 import org.webrtc.VideoCapturer;
 import org.webrtc.VideoFrame;
@@ -95,8 +105,13 @@ public class MainActivity extends AppCompatActivity implements
     public static final String EXTRA_CMDLINE = "org.appspot.apprtc.CMDLINE";
     public static final String EXTRA_RUNTIME = "org.appspot.apprtc.RUNTIME";
     public static final String EXTRA_ENABLE_RTCEVENTLOG = "org.appspot.apprtc.ENABLE_RTCEVENTLOG";
+    public static final String EXTRA_VIDEO_FILE_AS_CAMERA = "org.appspot.apprtc.VIDEO_FILE_AS_CAMERA";
     private static final String stunServer = "stun:firstlineconnect.com";
     private static final String turnServer = "turn:firstlineconnect.com";
+
+    private static Intent mediaProjectionPermissionResultData;
+    private static int mediaProjectionPermissionResultCode;
+
     private static class ProxyVideoSink implements VideoSink {
         private VideoSink target;
 
@@ -114,8 +129,11 @@ public class MainActivity extends AppCompatActivity implements
             this.target = target;
         }
     }
-    private final List<VideoSink> remoteSinks = new ArrayList<>();
 
+    private static final int CAPTURE_PERMISSION_REQUEST_CODE = 1;
+
+    private final List<VideoSink> remoteSinks = new ArrayList<>();
+    private boolean screencaptureEnabled;
     private final ProxyVideoSink localProxyVideoSink = new ProxyVideoSink();
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     @Nullable
@@ -152,6 +170,18 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
+    @Override
+    public void onIceConnected() {
+        runOnUiThread(() -> {
+            Log.d(TAG, "onIceConnected: IceCandidate Connected");
+        });
+    }
+
+    @Override
+    public void onIceDisconnected() {
+
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -182,6 +212,7 @@ public class MainActivity extends AppCompatActivity implements
         } catch (IOException e) {
             e.printStackTrace();
         }
+
 
         PeerConnectionClient.DataChannelParameters dataChannelParameters = null;
         if (intent.getBooleanExtra(EXTRA_DATA_CHANNEL_ENABLED, false)) {
@@ -215,11 +246,17 @@ public class MainActivity extends AppCompatActivity implements
         peerConnectionClient = new PeerConnectionClient(
                 getApplicationContext(), eglBase, peerConnectionParameters, MainActivity.this);
         PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
+
         peerConnectionClient.createPeerConnectionFactory(options);
+        
+        if (screencaptureEnabled) {
+           startScreenCapture();
+        }
 
         //webRtcInterface = new
         //Connection To Socket
         ConnectToSocket();
+        //startCamera();
         //Init WebRtcClient
 /*
         StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
@@ -257,6 +294,53 @@ public class MainActivity extends AppCompatActivity implements
         myViewModel.getEventMessage().observe(this, nameObserver);
         myViewModel.getMessageToWebRTC().observe(this, webRtcObserver);
         //myViewModel.getMessageToWebRTC().observe(this, IceCandidateObserver);
+
+    }
+
+    private @Nullable VideoCapturer createCameraCapturer (CameraEnumerator enumerator) {
+        final String[] deviceNames = enumerator.getDeviceNames();
+
+
+        for (String deviceName : deviceNames) {
+            if (enumerator.isFrontFacing(deviceName)) {
+                VideoCapturer videoCapturer = enumerator.createCapturer(deviceName, null);
+
+                if (videoCapturer != null) {
+                    return videoCapturer;
+                }
+            }
+        }
+        for (String deviceName : deviceNames) {
+            if (!enumerator.isFrontFacing(deviceName)) {
+                VideoCapturer videoCapturer = enumerator.createCapturer(deviceName, null);
+
+                if (videoCapturer != null) {
+                    return videoCapturer;
+                }
+            }
+        }
+        return null;
+    }
+    @TargetApi(21)
+    private void startScreenCapture() {
+        MediaProjectionManager mediaProjectionManager =
+                (MediaProjectionManager) getApplication().getSystemService(
+                        Context.MEDIA_PROJECTION_SERVICE);
+        startActivityForResult(
+                mediaProjectionManager.createScreenCaptureIntent(), CAPTURE_PERMISSION_REQUEST_CODE);
+    }
+
+    @TargetApi(21)
+    private @Nullable VideoCapturer createScreenCapturer() {
+        if (mediaProjectionPermissionResultCode != Activity.RESULT_OK) {
+            return null;
+        }
+        return new ScreenCapturerAndroid(
+                mediaProjectionPermissionResultData, new MediaProjection.Callback() {
+            @Override
+            public void onStop() {
+            }
+        });
     }
 
     public void inistializeWebRtcClient() {
@@ -274,8 +358,17 @@ public class MainActivity extends AppCompatActivity implements
                 null
         );
         onConnectedToRoomInternal(param);
+    }
 
+    private @Nullable VideoCapturer createVideoCapturer() {
+        final VideoCapturer videoCapturer;
+        if (screencaptureEnabled) {
+            return createScreenCapturer();
+        }
 
+        videoCapturer = createCameraCapturer(new Camera2Enumerator(this));
+
+        return videoCapturer;
     }
 
     /*
@@ -334,7 +427,9 @@ public class MainActivity extends AppCompatActivity implements
 
         signalingParameters = params;
         VideoCapturer videoCapturer = null;
-
+        if (peerConnectionParameters.videoCallEnabled) {
+            videoCapturer = createVideoCapturer();
+        }
         peerConnectionClient.createPeerConnection(localProxyVideoSink, remoteSinks, videoCapturer, signalingParameters);
 
         if (params.iceCandidates != null) {
@@ -371,7 +466,7 @@ public class MainActivity extends AppCompatActivity implements
                 }).show();
     }
 
-    public void startCamera() {
+    public VideoCapturer startCamera() {
         Log.d(TAG, "startCamera: Inside StartCamera");
         runOnUiThread(() -> {
             CameraX.unbindAll();
@@ -402,8 +497,10 @@ public class MainActivity extends AppCompatActivity implements
             final ImageCapture imgCap = new ImageCapture(imgCapConfig);
 
              CameraX.bindToLifecycle(this, imgCap, preview);
+
             Log.d(TAG, "startCamera: CameraStarted");
         });
+        return null;
     }
 
     private void updateTransform() {
@@ -535,7 +632,14 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
+    @Override
+    public void onStart() {
+    super.onStart();
+    if (peerConnectionClient != null && !screencaptureEnabled) {
+   //     peerConnectionClient.startVideoSource();
+    }
 
+}
 
 
 }

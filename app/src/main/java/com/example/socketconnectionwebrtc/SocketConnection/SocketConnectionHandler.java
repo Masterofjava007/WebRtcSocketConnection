@@ -126,7 +126,7 @@ public class SocketConnectionHandler {
 
 
     public void sendMessageToSocket(String message) {
-        Log.d(TAG, "sendMessageToSocket: WebRtcClient sending to socket");
+        Log.d(TAG, "sendMessageToSocket: WebRtcClient sending to socket" + message);
         wss.sendText(message);
 
 
