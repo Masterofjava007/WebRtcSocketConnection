@@ -9,7 +9,10 @@ import android.content.pm.PackageManager;
 import android.graphics.Camera;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.StrictMode;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Rational;
 import android.view.Surface;
@@ -25,6 +28,7 @@ import androidx.camera.core.Preview;
 import androidx.camera.core.PreviewConfig;
 import androidx.camera.core.VideoCapture;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -46,20 +50,26 @@ import com.google.gson.Gson;
 import android.util.Size;
 import android.graphics.Matrix;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
+import org.webrtc.Camera1Enumerator;
 import org.webrtc.Camera2Enumerator;
 import org.webrtc.CameraEnumerator;
 import org.webrtc.EglBase;
+import org.webrtc.FileVideoCapturer;
 import org.webrtc.IceCandidate;
 import org.webrtc.Logging;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
+import org.webrtc.RendererCommon;
 import org.webrtc.ScreenCapturerAndroid;
 import org.webrtc.SessionDescription;
+import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoCapturer;
+import org.webrtc.VideoFileRenderer;
 import org.webrtc.VideoFrame;
 import org.webrtc.VideoSink;
 
@@ -72,11 +82,15 @@ import java.util.concurrent.Executors;
 import static android.nfc.NfcAdapter.EXTRA_ID;
 
 public class MainActivity extends AppCompatActivity implements
-        PeerConnectionClient.PeerConnectionEvents, WebRtcInterface.SignalingEvents {
+        PeerConnectionClient.PeerConnectionEvents, WebRtcInterface.SignalingEvents, CallFragment.onCallEvents {
     public static final String EXTRA_VIDEO_WIDTH = "org.appspot.apprtc.VIDEO_WIDTH";
     public static final String EXTRA_VIDEO_HEIGHT = "org.appspot.apprtc.VIDEO_HEIGHT";
+    public static final String EXTRA_CAPTURETOTEXTURE_ENABLED = "org.appspot.apprtc.CAPTURETOTEXTURE";
+    public static final String EXTRA_VIDEO_CAPTUREQUALITYSLIDER_ENABLED = "VIDEO_CAPTUREQUALITYSLIDER";
     private boolean commandLineRun;
+    private boolean isSwappedFeeds;
     public static final String EXTRA_PROTOCOL = "org.appspot.apprtc.PROTOCOL";
+    public static final String EXTRA_CAMERA2 = "org.appspot.apprtc.CAMERA2";
     public static final String EXTRA_NEGOTIATED = "org.appspot.apprtc.NEGOTIATED";
     public static final String EXTRA_DATA_CHANNEL_ENABLED = "org.appspot.apprtc.DATA_CHANNEL_ENABLED";
     public static final String EXTRA_ORDERED = "org.appspot.apprtc.ORDERED";
@@ -106,11 +120,48 @@ public class MainActivity extends AppCompatActivity implements
     public static final String EXTRA_RUNTIME = "org.appspot.apprtc.RUNTIME";
     public static final String EXTRA_ENABLE_RTCEVENTLOG = "org.appspot.apprtc.ENABLE_RTCEVENTLOG";
     public static final String EXTRA_VIDEO_FILE_AS_CAMERA = "org.appspot.apprtc.VIDEO_FILE_AS_CAMERA";
+    public static final String EXTRA_SCREENCAPTURE = "org.appspot.apprtc.SCREENCAPTURE";
     private static final String stunServer = "stun:firstlineconnect.com";
     private static final String turnServer = "turn:firstlineconnect.com";
-
+    public static final String EXTRA_SAVE_REMOTE_VIDEO_TO_FILE =
+            "org.appspot.apprtc.SAVE_REMOTE_VIDEO_TO_FILE";
+    public static final String EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_WIDTH =
+            "org.appspot.apprtc.SAVE_REMOTE_VIDEO_TO_FILE_WIDTH";
+    public static final String EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_HEIGHT =
+            "org.appspot.apprtc.SAVE_REMOTE_VIDEO_TO_FILE_HEIGHT";
     private static Intent mediaProjectionPermissionResultData;
     private static int mediaProjectionPermissionResultCode;
+    private final ProxyVideoSink remoteProxyRenderer = new ProxyVideoSink();
+
+    @Nullable
+    private SurfaceViewRenderer pipRenderer;
+    @Nullable
+    private SurfaceViewRenderer fullscreenRenderer;
+
+    @Override
+    public void onCallHangup() {
+
+    }
+
+    @Override
+    public void onCameraSwitch() {
+
+    }
+
+    @Override
+    public void onVideoScalingSwitch(RendererCommon.ScalingType scalingType) {
+
+    }
+
+    @Override
+    public void onCaptureFormatChange(int width, int height, int framerate) {
+
+    }
+
+    @Override
+    public boolean onToggleMic() {
+        return false;
+    }
 
     private static class ProxyVideoSink implements VideoSink {
         private VideoSink target;
@@ -145,6 +196,8 @@ public class MainActivity extends AppCompatActivity implements
     private static final String TAG = "MainActivity";
     //private FirebaseAuth mAuth;
     @Nullable
+    private VideoFileRenderer videoFileRenderer;
+    @Nullable
     private PeerConnectionClient.PeerConnectionParameters peerConnectionParameters;
     private MyViewModel myViewModel;
     private SocketConnectionHandler socketConnectionHandler;
@@ -157,6 +210,9 @@ public class MainActivity extends AppCompatActivity implements
     Gson gson = new Gson();
     final EglBase eglBase = EglBase.create();
 
+    private CallFragment callFragment;
+
+
     @Override
     public void onLocalDescription(final SessionDescription sdp) {
         Log.d(TAG, "onLocalDescription: " + sdp);
@@ -166,7 +222,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onIceCandidate(IceCandidate iceCandidate) {
         Log.d(TAG, "onIceCandidate: Trying to go to SendLocalIceCandidate");
-           sendLocalIceCandidate(iceCandidate);
+        sendLocalIceCandidate(iceCandidate);
 
     }
 
@@ -188,23 +244,18 @@ public class MainActivity extends AppCompatActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        final Intent intent = getIntent();
 
-        boolean loopback = intent.getBooleanExtra(EXTRA_LOOPBACK, false);
-        boolean tracing = intent.getBooleanExtra(EXTRA_TRACING, false);
-        int videoWidth = intent.getIntExtra(EXTRA_VIDEO_WIDTH, 0);
-        int videoHeight = intent.getIntExtra(EXTRA_VIDEO_HEIGHT, 0);
+        final EglBase eglBase = EglBase.create();
 
         myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
 
         //auth = FirebaseAuth.getInstance();
         textureView = findViewById(R.id.view_finder1);
-        RecyclerView recyclerView = findViewById(R.id.textViewRecycleerView);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.setHasFixedSize(true);
+        fullscreenRenderer = findViewById(R.id.fullscreen_video_view);
+        pipRenderer = findViewById(R.id.pip_video_view);
+        callFragment = new CallFragment();
 
-        final Adapter adapter = new Adapter();
-        recyclerView.setAdapter(adapter);
+
 
 
         try {
@@ -214,6 +265,21 @@ public class MainActivity extends AppCompatActivity implements
         }
 
 
+        ConnectToSocket();
+
+        final Intent intent = getIntent();
+
+        boolean loopback = intent.getBooleanExtra(EXTRA_LOOPBACK, false);
+        boolean tracing = intent.getBooleanExtra(EXTRA_TRACING, false);
+
+        int videoWidth = intent.getIntExtra(EXTRA_VIDEO_WIDTH, 0);
+        int videoHeight = intent.getIntExtra(EXTRA_VIDEO_HEIGHT, 0);
+
+
+        DisplayMetrics displayMetrics = getDisplayMetrics();
+        videoWidth = displayMetrics.widthPixels;
+        videoHeight = displayMetrics.heightPixels;
+
         PeerConnectionClient.DataChannelParameters dataChannelParameters = null;
         if (intent.getBooleanExtra(EXTRA_DATA_CHANNEL_ENABLED, false)) {
             dataChannelParameters = new PeerConnectionClient.DataChannelParameters(intent.getBooleanExtra(EXTRA_ORDERED, true),
@@ -221,7 +287,6 @@ public class MainActivity extends AppCompatActivity implements
                     intent.getIntExtra(EXTRA_MAX_RETRANSMITS, -1), intent.getStringExtra(EXTRA_PROTOCOL),
                     intent.getBooleanExtra(EXTRA_NEGOTIATED, false), intent.getIntExtra(EXTRA_ID, -1));
         }
-
         peerConnectionParameters =
                 new PeerConnectionClient.PeerConnectionParameters(intent.getBooleanExtra(EXTRA_VIDEO_CALL, true), loopback,
                         tracing, videoWidth, videoHeight, intent.getIntExtra(EXTRA_VIDEO_FPS, 0),
@@ -248,17 +313,10 @@ public class MainActivity extends AppCompatActivity implements
         PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
 
         peerConnectionClient.createPeerConnectionFactory(options);
-        
-        if (screencaptureEnabled) {
-           startScreenCapture();
-        }
 
-        //webRtcInterface = new
-        //Connection To Socket
-        ConnectToSocket();
-        //startCamera();
-        //Init WebRtcClient
-/*
+
+
+        /*
         StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
                 .detectDiskReads()
                 .detectDiskWrites()
@@ -269,9 +327,9 @@ public class MainActivity extends AppCompatActivity implements
                 .detectLeakedSqlLiteObjects()
                 .detectLeakedClosableObjects()
                 .penaltyLog()
-                .penaltyDeath()
-                .build());
- */
+                .penaltyDeath().build());
+*/
+
         final Observer<String> nameObserver = newName -> {
             Log.d(TAG, "onCreate: " + newName);
             Log.d(TAG, "onCreate: HVAD ER NEWNAME" + newName);
@@ -281,23 +339,63 @@ public class MainActivity extends AppCompatActivity implements
         final Observer<? super WebRtcInterface.SignalingParameters> webRtcObserver = newWebRTCMessage -> {
             Log.d(TAG, "onCreate: WebRTCMessageObserver");
             inistializeWebRtcClient();
+            initCamera();
             peerConnectionClient.settingRemoteDescription(newWebRTCMessage.offerSdp);
         };
-        /*
-        final Observer<> IceCandidateObserver = iceObserver -> {
-            Log.d(TAG, "onCreate: ICE CANDIDATE " + iceObserver);
-            peerConnectionClient.addRemoteIceCandidate(iceObserver);
-        };
 
-         */
-        // Observe the LiveData, passing in this activity as the LifecycleOwner and the observer.
         myViewModel.getEventMessage().observe(this, nameObserver);
         myViewModel.getMessageToWebRTC().observe(this, webRtcObserver);
-        //myViewModel.getMessageToWebRTC().observe(this, IceCandidateObserver);
 
     }
 
-    private @Nullable VideoCapturer createCameraCapturer (CameraEnumerator enumerator) {
+    private void initCamera() {
+
+
+        fullscreenRenderer.init(eglBase.getEglBaseContext(), null);
+        fullscreenRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
+        pipRenderer.init(eglBase.getEglBaseContext(), null);
+        pipRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
+
+        final Intent intent = getIntent();
+
+        String saveRemoteVideoToFile = intent.getStringExtra(EXTRA_SAVE_REMOTE_VIDEO_TO_FILE);
+
+        if (saveRemoteVideoToFile != null) {
+            int videoOutWidth = intent.getIntExtra(EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_WIDTH, 0);
+            int videoOutHeight = intent.getIntExtra(EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_HEIGHT, 0);
+            try {
+                videoFileRenderer = new VideoFileRenderer(saveRemoteVideoToFile, videoOutWidth, videoOutHeight, eglBase.getEglBaseContext());
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to open video file for output " + saveRemoteVideoToFile, e);
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ECLAIR) {
+            pipRenderer.setZOrderMediaOverlay(true);
+        }
+        pipRenderer.setEnableHardwareScaler(true);
+        fullscreenRenderer.setEnableHardwareScaler(true);
+
+        setSwappedFeeds(true /* isSwappedFeeds */);
+        screencaptureEnabled = intent.getBooleanExtra(EXTRA_SCREENCAPTURE, false);
+
+
+        callFragment.setArguments(intent.getExtras());
+        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+        ft.add(R.id.call_fragment_container, callFragment);
+        ft.commit();
+    }
+
+    @TargetApi(17)
+    private DisplayMetrics getDisplayMetrics() {
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        WindowManager windowManager =
+                (WindowManager) getApplication().getSystemService(Context.WINDOW_SERVICE);
+        windowManager.getDefaultDisplay().getRealMetrics(displayMetrics);
+        return displayMetrics;
+    }
+
+    private @Nullable VideoCapturer createCameraCapturer(CameraEnumerator enumerator) {
         final String[] deviceNames = enumerator.getDeviceNames();
 
 
@@ -321,6 +419,7 @@ public class MainActivity extends AppCompatActivity implements
         }
         return null;
     }
+
     @TargetApi(21)
     private void startScreenCapture() {
         MediaProjectionManager mediaProjectionManager =
@@ -343,6 +442,15 @@ public class MainActivity extends AppCompatActivity implements
         });
     }
 
+    private boolean useCamera2() {
+        return Camera2Enumerator.isSupported(this) && getIntent().getBooleanExtra(EXTRA_CAMERA2, true);
+    }
+
+    private boolean captureToTexture() {
+        return getIntent().getBooleanExtra(EXTRA_CAPTURETOTEXTURE_ENABLED, false);
+    }
+
+
     public void inistializeWebRtcClient() {
 
         Log.d(TAG, "inistializeWebRtcClient: Rammer Vi her Inistailiza WebRTCCLIENT");
@@ -362,11 +470,9 @@ public class MainActivity extends AppCompatActivity implements
 
     private @Nullable VideoCapturer createVideoCapturer() {
         final VideoCapturer videoCapturer;
-        if (screencaptureEnabled) {
-            return createScreenCapturer();
-        }
+        String videoFileAsCamera = getIntent().getStringExtra(EXTRA_VIDEO_FILE_AS_CAMERA);
 
-        videoCapturer = createCameraCapturer(new Camera2Enumerator(this));
+            videoCapturer = createCameraCapturer(new Camera2Enumerator(this));
 
         return videoCapturer;
     }
@@ -439,6 +545,14 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
     }
+    private void setSwappedFeeds(boolean isSwappedFeeds) {
+        Logging.d(TAG, "setSwappedFeeds: " + isSwappedFeeds);
+        this.isSwappedFeeds = isSwappedFeeds;
+        localProxyVideoSink.setTarget(isSwappedFeeds ? fullscreenRenderer : pipRenderer);
+        remoteProxyRenderer.setTarget(isSwappedFeeds ? pipRenderer : fullscreenRenderer);
+        fullscreenRenderer.setMirror(isSwappedFeeds);
+        pipRenderer.setMirror(!isSwappedFeeds);
+    }
 
     private void dialog(String payload) {
         Log.d(TAG, "onCreate: Working");
@@ -496,7 +610,7 @@ public class MainActivity extends AppCompatActivity implements
                     .setTargetRotation(getWindowManager().getDefaultDisplay().getRotation()).build();
             final ImageCapture imgCap = new ImageCapture(imgCapConfig);
 
-             CameraX.bindToLifecycle(this, imgCap, preview);
+            CameraX.bindToLifecycle(this, imgCap, preview);
 
             Log.d(TAG, "startCamera: CameraStarted");
         });
@@ -600,7 +714,7 @@ public class MainActivity extends AppCompatActivity implements
 
     public void sendLocalIceCandidate(IceCandidate iceCandidate) {
         Log.d(TAG, "sendLocalIceCandidate: SENDING");
-        executor.execute(()->{
+        executor.execute(() -> {
 
             BaseMessage base = new BaseMessage(MessageType.sendCandidate, new sendIceCandidate("+4529933087", "Steffen", new iceCandidateParamters(iceCandidate.sdp, iceCandidate.sdpMLineIndex, iceCandidate.sdpMid)));
             Log.d(TAG, "sendLocalIceCandidate: " + base);
@@ -610,6 +724,7 @@ public class MainActivity extends AppCompatActivity implements
 
         });
     }
+
     @Override
     public void onRemoteIceCandidate(IceCandidate candidate) {
         Log.d(TAG, "onRemoteIceCandidate: Rammer Her med ICeCandidate");
@@ -634,13 +749,12 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onStart() {
-    super.onStart();
-    if (peerConnectionClient != null && !screencaptureEnabled) {
-   //     peerConnectionClient.startVideoSource();
+        super.onStart();
+        if (peerConnectionClient != null && !screencaptureEnabled) {
+            //peerConnectionClient.startVideoSource();
+        }
+
     }
-
-}
-
 
 }
 

@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">SocketConnectionWebRTC</string>
     <string name="internetConnectioNotFound">No internet found..</string>
+    <string name="format_description">%1$dx%2$d @ %3$d fps</string>
 </resources>
