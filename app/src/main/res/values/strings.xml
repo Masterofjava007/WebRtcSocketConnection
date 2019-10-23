@@ -2,4 +2,7 @@
     <string name="app_name">SocketConnectionWebRTC</string>
     <string name="internetConnectioNotFound">No internet found..</string>
     <string name="format_description">%1$dx%2$d @ %3$d fps</string>
+    <string name="title_activity_fragment_hud">fragment_hud</string>
+    <string name="toggle_debug">Toggle debug view</string>
+
 </resources>

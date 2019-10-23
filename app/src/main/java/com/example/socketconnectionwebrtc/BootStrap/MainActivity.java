@@ -49,6 +49,7 @@ import com.google.gson.Gson;
 
 import android.util.Size;
 import android.graphics.Matrix;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Toast;
@@ -87,6 +88,8 @@ public class MainActivity extends AppCompatActivity implements
     public static final String EXTRA_VIDEO_HEIGHT = "org.appspot.apprtc.VIDEO_HEIGHT";
     public static final String EXTRA_CAPTURETOTEXTURE_ENABLED = "org.appspot.apprtc.CAPTURETOTEXTURE";
     public static final String EXTRA_VIDEO_CAPTUREQUALITYSLIDER_ENABLED = "VIDEO_CAPTUREQUALITYSLIDER";
+    public static final String EXTRA_DISPLAY_HUD = "org.appspot.apprtc.DISPLAY_HUD";
+
     private boolean commandLineRun;
     private boolean isSwappedFeeds;
     public static final String EXTRA_PROTOCOL = "org.appspot.apprtc.PROTOCOL";
@@ -132,6 +135,7 @@ public class MainActivity extends AppCompatActivity implements
     private static Intent mediaProjectionPermissionResultData;
     private static int mediaProjectionPermissionResultCode;
     private final ProxyVideoSink remoteProxyRenderer = new ProxyVideoSink();
+    private boolean callControlFragmentVisible = true;
 
     @Nullable
     private SurfaceViewRenderer pipRenderer;
@@ -211,7 +215,7 @@ public class MainActivity extends AppCompatActivity implements
     final EglBase eglBase = EglBase.create();
 
     private CallFragment callFragment;
-
+    private fragment_hud hudFragment;
 
     @Override
     public void onLocalDescription(final SessionDescription sdp) {
@@ -250,12 +254,11 @@ public class MainActivity extends AppCompatActivity implements
         myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
 
         //auth = FirebaseAuth.getInstance();
-        textureView = findViewById(R.id.view_finder1);
+
         fullscreenRenderer = findViewById(R.id.fullscreen_video_view);
         pipRenderer = findViewById(R.id.pip_video_view);
         callFragment = new CallFragment();
-
-
+        hudFragment = new fragment_hud();
 
 
         try {
@@ -315,7 +318,28 @@ public class MainActivity extends AppCompatActivity implements
         peerConnectionClient.createPeerConnectionFactory(options);
 
 
+        if (screencaptureEnabled) {
+            startScreenCapture();
+        } else {
+            Log.d(TAG, "onCreate: Starting Screen Rammer else");
+        }
 
+        View.OnClickListener listener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setSwappedFeeds(!isSwappedFeeds);
+            }
+        };
+        pipRenderer.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleCallControlFragmentVisibility();
+            }
+        });
+
+
+        fullscreenRenderer.setOnClickListener(listener);
+        remoteSinks.add(remoteProxyRenderer);
         /*
         StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
                 .detectDiskReads()
@@ -381,11 +405,30 @@ public class MainActivity extends AppCompatActivity implements
 
 
         callFragment.setArguments(intent.getExtras());
+        hudFragment.setArguments(intent.getExtras());
         FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
         ft.add(R.id.call_fragment_container, callFragment);
+        ft.add(R.id.hud_fragment_container, hudFragment);
         ft.commit();
     }
 
+    private void toggleCallControlFragmentVisibility() {
+        if (!callFragment.isAdded()) {
+            return;
+        }
+        // Show/hide call control fragment
+        callControlFragmentVisible = !callControlFragmentVisible;
+       FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+        if (callControlFragmentVisible) {
+            ft.show(callFragment);
+            ft.show(hudFragment);
+        } else {
+            ft.hide(callFragment);
+            ft.hide(hudFragment);
+        }
+        ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
+        ft.commit();
+    }
     @TargetApi(17)
     private DisplayMetrics getDisplayMetrics() {
         DisplayMetrics displayMetrics = new DisplayMetrics();
@@ -455,7 +498,7 @@ public class MainActivity extends AppCompatActivity implements
 
         Log.d(TAG, "inistializeWebRtcClient: Rammer Vi her Inistailiza WebRTCCLIENT");
         ArrayList<PeerConnection.IceServer> iceServers = new ArrayList();
-        iceServers.add(PeerConnection.IceServer.builder(stunServer).createIceServer());
+        iceServers.add(PeerConnection.IceServer.builder(stunServer).setUsername("u").setPassword("p").createIceServer());
         iceServers.add(PeerConnection.IceServer.builder(turnServer).setUsername("u").setPassword("p").createIceServer());
 
         WebRtcInterface.SignalingParameters param = new WebRtcInterface.SignalingParameters(
@@ -472,7 +515,7 @@ public class MainActivity extends AppCompatActivity implements
         final VideoCapturer videoCapturer;
         String videoFileAsCamera = getIntent().getStringExtra(EXTRA_VIDEO_FILE_AS_CAMERA);
 
-            videoCapturer = createCameraCapturer(new Camera2Enumerator(this));
+        videoCapturer = createCameraCapturer(new Camera2Enumerator(this));
 
         return videoCapturer;
     }
@@ -545,6 +588,7 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
     }
+
     private void setSwappedFeeds(boolean isSwappedFeeds) {
         Logging.d(TAG, "setSwappedFeeds: " + isSwappedFeeds);
         this.isSwappedFeeds = isSwappedFeeds;
