@@ -68,13 +68,17 @@ public class CallFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 if (scalingType == RendererCommon.ScalingType.SCALE_ASPECT_FILL) {
+
                     scalingType = RendererCommon.ScalingType.SCALE_ASPECT_FIT;
                 } else {
+
                     scalingType = RendererCommon.ScalingType.SCALE_ASPECT_FIT;
                 }
                 callEvents.onVideoScalingSwitch(scalingType);
             }
         });
+        scalingType = RendererCommon.ScalingType.SCALE_ASPECT_FIT;
+
         toggleMuteButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -93,22 +97,25 @@ public class CallFragment extends Fragment {
         boolean captureSliderEnabeld = false;
         Bundle args = getArguments();
         if(args != null) {
+            String contactName = args.getString(MainActivity.EXTRA_DATA_CHANNEL_ENABLED);
+            contactView.setText(contactName);
             videoCAllEnabled = args.getBoolean(MainActivity.EXTRA_VIDEO_CALL, true);
-            captureSliderEnabeld = videoCAllEnabled&& args.getBoolean(MainActivity.EXTRA_VIDEO_CAPTUREQUALITYSLIDER_ENABLED, true);
+            captureSliderEnabeld = videoCAllEnabled && args.getBoolean(MainActivity.EXTRA_VIDEO_CAPTUREQUALITYSLIDER_ENABLED, true);
         }
         if (!videoCAllEnabled) {
             cameraSwitchButton.setVisibility(View.INVISIBLE);
         }
         if (captureSliderEnabeld) {
-            captureFormatSlider.setOnSeekBarChangeListener(new CapturerQualityController(captureFormatText, callEvents));
+            captureFormatSlider.setOnSeekBarChangeListener(
+                    new CapturerQualityController(captureFormatText, callEvents));
         } else {
             captureFormatText.setVisibility(View.GONE);
             captureFormatSlider.setVisibility(View.GONE);
         }
     }
-
+    @SuppressWarnings("deprecation")
     @Override
-    public void onAttach(@NonNull Activity activity) {
+    public void onAttach(Activity activity) {
         super.onAttach(activity);
         callEvents = (onCallEvents) activity;
     }

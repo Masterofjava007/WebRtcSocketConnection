@@ -21,34 +21,24 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = 1.8
-        targetCompatibility = 1.8
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 }
 
 dependencies {
     def lifecycle_version = "2.1.0"
-
     implementation 'com.android.support:recyclerview-v7:28.0.0'
     implementation 'android.arch.lifecycle:extensions:1.1.1'
-
+    implementation 'com.google.ar:core:1.12.0'
     implementation "androidx.lifecycle:lifecycle-extensions:$lifecycle_version"
-
     implementation "androidx.lifecycle:lifecycle-viewmodel:$lifecycle_version"
-
     implementation "androidx.lifecycle:lifecycle-livedata:$lifecycle_version"
-
     implementation "androidx.lifecycle:lifecycle-runtime:$lifecycle_version"
-
     implementation 'com.google.android.material:material:1.0.0'
     annotationProcessor "androidx.lifecycle:lifecycle-compiler:$lifecycle_version"
-
     implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycle_version"
-
-
     implementation "androidx.lifecycle:lifecycle-reactivestreams:$lifecycle_version"
-
-
     testImplementation "androidx.arch.core:core-testing:$lifecycle_version"
     implementation 'org.webrtc:google-webrtc:1.0.28513'
     def camerax_version = "1.0.0-alpha05"
@@ -65,6 +55,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-auth:19.1.0'
     implementation 'io.crossbar.autobahn:autobahn-android:18.5.1'
     implementation 'org.jetbrains:annotations:15.0'
-
+    implementation "com.google.ar.sceneform.ux:sceneform-ux:1.8.0"
 
 }
+apply plugin: 'com.google.ar.sceneform.plugin'

@@ -3,10 +3,19 @@
     android:orientation="vertical" android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <TextView
+        android:id="@+id/contact_name_call"
+        android:layout_width="393dp"
+        android:layout_height="639dp"
+        android:layout_above="@+id/buttons_call_container"
+        android:layout_centerHorizontal="true"
+        android:layout_margin="8dp"
+        android:textSize="24sp"/>
+
     <LinearLayout
         android:id="@+id/buttons_call_container"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="51dp"
         android:layout_alignWithParentIfMissing="true"
         android:layout_above="@+id/capture_format_text_call"
         android:layout_centerHorizontal="true"
@@ -31,6 +40,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp" />
 
+
         <ImageButton
             android:id="@+id/button_call_toggle_mic"
             android:layout_width="48dp"
@@ -38,32 +48,29 @@
             android:layout_marginEnd="8dp"
             android:background="@android:drawable/ic_btn_speak_now" />
 
-
         <TextView
-        android:id="@+id/capture_format_text_call"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_above="@+id/capture_format_slider_call"
-        android:textSize="16sp"/>
+            android:id="@+id/capture_format_text_call"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/capture_format_slider_call"
+            android:layout_centerHorizontal="true"
+            android:textSize="16sp" />
 
 
-    <SeekBar
-        android:id="@+id/capture_format_slider_call"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_margin="8dp"
-        android:progress="50" />
+        <SeekBar
+            android:id="@+id/capture_format_slider_call"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_margin="8dp"
+            android:progress="50" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/contact_name_call"
-        android:layout_width="216dp"
-        android:layout_height="61dp"
-        android:layout_above="@+id/buttons_call_container"
-        android:layout_centerHorizontal="true"
-        android:layout_margin="8dp"
-        android:textSize="24sp" />
+    <fragment
+        android:id="@+id/sceneform_fragment"
+        android:name="com.google.ar.sceneform.ux.ArFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
 </LinearLayout>

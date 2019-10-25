@@ -41,6 +41,7 @@ public class VerifyAccont extends AppCompatActivity {
         setContentView(R.layout.activity_verify_accont);
 
         mAuth = FirebaseAuth.getInstance();
+
         //FindView
         verifyBut = findViewById(R.id.verifyButton);
         verifyTextView = findViewById(R.id.verifyTextView);
@@ -49,7 +50,6 @@ public class VerifyAccont extends AppCompatActivity {
         phoneNumber = getIntent().getExtras().getString("phoneNumber");
         System.out.println(phoneNumber);
         preFix = getIntent().getExtras().getString("preFix");
-
 
         //Requesting phoneCode
         getVerificationCode(phoneNumber);

@@ -4,5 +4,9 @@
     <string name="format_description">%1$dx%2$d @ %3$d fps</string>
     <string name="title_activity_fragment_hud">fragment_hud</string>
     <string name="toggle_debug">Toggle debug view</string>
+    <string name="Country_code">Country Code</string>
+    <string name="Phone_number">Phone number</string>
+    <string name="Login">Login</string>
+    <string name="Verify">Verify</string>
 
 </resources>
