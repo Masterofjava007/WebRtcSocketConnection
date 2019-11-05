@@ -1,12 +1,19 @@
 package com.example.socketconnectionwebrtc.WebRtc;
 
 import android.content.Context;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.media.AudioManager;
 import android.media.AudioRecordingConfiguration;
 import android.util.Log;
 
 import com.example.socketconnectionwebrtc.AudioManager.RecordAudio;
+import com.example.socketconnectionwebrtc.Enum.MessageType;
+import com.example.socketconnectionwebrtc.Model.BaseMessageHandler;
+import com.example.socketconnectionwebrtc.Model.arrowMessage;
 import com.example.socketconnectionwebrtc.RecorderAudioToFileController.RecordedAudioToFileController;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import org.jetbrains.annotations.Nullable;
 import org.webrtc.AudioSource;
@@ -122,7 +129,7 @@ public class PeerConnectionClient {
     private AudioSource audioSource;
     @Nullable
     private VideoSink localRender;
-
+    private Paint paint = new Paint();
     private boolean videoCapturerStopped;
     private final SDPObserver sdpObserver = new SDPObserver();
     private final EglBase rootEglBase;
@@ -133,7 +140,7 @@ public class PeerConnectionClient {
     private WebRtcInterface.SignalingParameters signalingParameters;
     private boolean preferIsac;
     private boolean isInitiator;
-
+    private Gson gson = new Gson();
 
     public static class DataChannelParameters {
         public final boolean ordered;
@@ -488,7 +495,7 @@ public class PeerConnectionClient {
         executor.execute(() -> {
 
 
-            if (peerConnection == null){
+            if (peerConnection == null) {
                 return;
             }
             String sdpDescription = sdp.description;
@@ -496,17 +503,17 @@ public class PeerConnectionClient {
             if (preferIsac) {
                 sdpDescription = preferCodec(sdpDescription, AUDIO_CODEC_ISAC, true);
             }
-            if (peerConnectionParameters.audioStartBitrate > 0 ) {
+            if (peerConnectionParameters.audioStartBitrate > 0) {
                 sdpDescription = setStartBitrate(AUDIO_CODEC_ISAC, false, sdpDescription, peerConnectionParameters.audioStartBitrate);
             }
 
             Log.d(TAG, "settingRemoteDescription: Hitting");
 
-                localSdp = sdp;
-                SessionDescription sdpRemote = new SessionDescription(sdp.type, sdpDescription);
-                peerConnection.setRemoteDescription(sdpObserver, sdpRemote);
+            localSdp = sdp;
+            SessionDescription sdpRemote = new SessionDescription(sdp.type, sdpDescription);
+            peerConnection.setRemoteDescription(sdpObserver, sdpRemote);
 
-                Log.d(TAG, "settingRemoteDescription: done");
+            Log.d(TAG, "settingRemoteDescription: done");
         });
     }
 
@@ -586,7 +593,28 @@ public class PeerConnectionClient {
                     final byte[] bytes = new byte[data.capacity()];
                     data.get(bytes);
                     String strData = new String(bytes, Charset.forName("UTF-8"));
-                    Log.d(TAG, "onMessage: " + strData + " " + dataChannel);
+                    Log.d(TAG, "onMessage: " + strData);
+
+                    BaseMessageHandler<arrowMessage> unCoverMessage = gson.fromJson
+                            (strData, new TypeToken<BaseMessageHandler<arrowMessage>>
+                                    () {
+                            }.getType());
+
+                    String messageType = unCoverMessage.getType();
+
+                    MessageType messageTypeEnum = MessageType.valueOf(messageType);
+
+                    switch (messageTypeEnum) {
+                        case placeArrow:
+                            Log.d(TAG, "onMessage: Hitting");
+                            if (dataChannelEnabled) {
+                                float cx = unCoverMessage.getPayload().getX();
+                                float cy = unCoverMessage.getPayload().getY();
+                                paint.setColor(Color.BLUE);
+
+                            }
+                    }
+
                 }
             });
         }

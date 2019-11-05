@@ -14,5 +14,6 @@ public enum MessageType  {
     candidate,
     sendAnswer,
     receiveCandidate,
-    sendCandidate
+    sendCandidate,
+    placeArrow
 }

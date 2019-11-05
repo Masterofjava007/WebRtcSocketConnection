@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'com.google.gms.google-services'
+apply plugin: 'com.google.ar.sceneform.plugin'
 
 android {
 
@@ -30,7 +31,6 @@ dependencies {
     def lifecycle_version = "2.1.0"
     implementation 'com.android.support:recyclerview-v7:28.0.0'
     implementation 'android.arch.lifecycle:extensions:1.1.1'
-    implementation 'com.google.ar:core:1.12.0'
     implementation "androidx.lifecycle:lifecycle-extensions:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-viewmodel:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-livedata:$lifecycle_version"
@@ -55,7 +55,5 @@ dependencies {
     implementation 'com.google.firebase:firebase-auth:19.1.0'
     implementation 'io.crossbar.autobahn:autobahn-android:18.5.1'
     implementation 'org.jetbrains:annotations:15.0'
-    implementation "com.google.ar.sceneform.ux:sceneform-ux:1.8.0"
-
+    implementation "com.google.ar.sceneform.ux:sceneform-ux:1.13.0"
 }
-apply plugin: 'com.google.ar.sceneform.plugin'

@@ -9,6 +9,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Camera;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.StrictMode;
@@ -19,6 +20,7 @@ import android.view.Surface;
 import android.view.TextureView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraX;
@@ -34,6 +36,7 @@ import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.socketconnectionwebrtc.ARCore.Pointer;
 import com.example.socketconnectionwebrtc.Enum.MessageType;
 import com.example.socketconnectionwebrtc.Login.LoginManager;
 import com.example.socketconnectionwebrtc.Model.BaseMessage;
@@ -46,12 +49,21 @@ import com.example.socketconnectionwebrtc.R;
 import com.example.socketconnectionwebrtc.SocketConnection.SocketConnectionHandler;
 import com.example.socketconnectionwebrtc.WebRtc.PeerConnectionClient;
 import com.example.socketconnectionwebrtc.WebRtc.WebRtcInterface;
+import com.google.ar.core.Anchor;
+import com.google.ar.core.Frame;
+import com.google.ar.core.HitResult;
+import com.google.ar.core.Plane;
 import com.google.ar.core.Session;
+import com.google.ar.core.Trackable;
+import com.google.ar.core.TrackingState;
 import com.google.ar.core.exceptions.UnavailableApkTooOldException;
 import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
 import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException;
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
+import com.google.ar.sceneform.AnchorNode;
+import com.google.ar.sceneform.rendering.ModelRenderable;
 import com.google.ar.sceneform.ux.ArFragment;
+import com.google.ar.sceneform.ux.TransformableNode;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.gson.Gson;
@@ -62,6 +74,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import org.jetbrains.annotations.Nullable;
@@ -86,6 +101,7 @@ import org.webrtc.VideoFrame;
 import org.webrtc.VideoSink;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.net.URLStreamHandler;
 import java.util.ArrayList;
 import java.util.List;
@@ -96,57 +112,54 @@ import static android.nfc.NfcAdapter.EXTRA_ID;
 
 public class MainActivity extends AppCompatActivity implements
         PeerConnectionClient.PeerConnectionEvents, WebRtcInterface.SignalingEvents, CallFragment.onCallEvents {
-    public static final String EXTRA_VIDEO_WIDTH = "org.appspot.apprtc.VIDEO_WIDTH";
-    public static final String EXTRA_VIDEO_HEIGHT = "org.appspot.apprtc.VIDEO_HEIGHT";
-    public static final String EXTRA_CAPTURETOTEXTURE_ENABLED = "org.appspot.apprtc.CAPTURETOTEXTURE";
+    public static final String EXTRA_VIDEO_WIDTH = "VIDEO_WIDTH";
+    public static final String EXTRA_VIDEO_HEIGHT = "VIDEO_HEIGHT";
+    public static final String EXTRA_CAPTURETOTEXTURE_ENABLED = "CAPTURETOTEXTURE";
     public static final String EXTRA_VIDEO_CAPTUREQUALITYSLIDER_ENABLED = "VIDEO_CAPTUREQUALITYSLIDER";
-    public static final String EXTRA_DISPLAY_HUD = "org.appspot.apprtc.DISPLAY_HUD";
-    private static final String[] MANDATORY_PERMISSIONS = {"android.permission.MODIFY_AUDIO_SETTINGS",
-            "android.permission.RECORD_AUDIO", "android.permission.INTERNET"};
-    private boolean commandLineRun;
-    private boolean isSwappedFeeds;
-    public static final String EXTRA_PROTOCOL = "org.appspot.apprtc.PROTOCOL";
-    public static final String EXTRA_CAMERA2 = "org.appspot.apprtc.CAMERA2";
-    public static final String EXTRA_NEGOTIATED = "org.appspot.apprtc.NEGOTIATED";
-    public static final String EXTRA_DATA_CHANNEL_ENABLED = "org.appspot.apprtc.DATA_CHANNEL_ENABLED";
-    public static final String EXTRA_ORDERED = "org.appspot.apprtc.ORDERED";
-    public static final String EXTRA_MAX_RETRANSMITS_MS = "org.appspot.apprtc.MAX_RETRANSMITS_MS";
-    public static final String EXTRA_MAX_RETRANSMITS = "org.appspot.apprtc.MAX_RETRANSMITS";
-    public static final String EXTRA_LOOPBACK = "org.appspot.apprtc.LOOPBACK";
-    public static final String EXTRA_VIDEO_CALL = "org.appspot.apprtc.VIDEO_CALL";
-    public static final String EXTRA_VIDEO_FPS = "org.appspot.apprtc.VIDEO_FPS";
-    public static final String EXTRA_VIDEO_BITRATE = "org.appspot.apprtc.VIDEO_BITRATE";
-    public static final String EXTRA_VIDEOCODEC = "org.appspot.apprtc.VIDEOCODEC";
-    public static final String EXTRA_HWCODEC_ENABLED = "org.appspot.apprtc.HWCODEC";
-    public static final String EXTRA_FLEXFEC_ENABLED = "org.appspot.apprtc.FLEXFEC";
-    public static final String EXTRA_AUDIO_BITRATE = "org.appspot.apprtc.AUDIO_BITRATE";
-    public static final String EXTRA_AUDIOCODEC = "org.appspot.apprtc.AUDIOCODEC";
-    public static final String EXTRA_NOAUDIOPROCESSING_ENABLED =
-            "org.appspot.apprtc.NOAUDIOPROCESSING";
-    public static final String EXTRA_AECDUMP_ENABLED = "org.appspot.apprtc.AECDUMP";
-    public static final String EXTRA_SAVE_INPUT_AUDIO_TO_FILE_ENABLED =
-            "org.appspot.apprtc.SAVE_INPUT_AUDIO_TO_FILE";
-    public static final String EXTRA_OPENSLES_ENABLED = "org.appspot.apprtc.OPENSLES";
-    public static final String EXTRA_DISABLE_BUILT_IN_AEC = "org.appspot.apprtc.DISABLE_BUILT_IN_AEC";
-    public static final String EXTRA_DISABLE_BUILT_IN_AGC = "org.appspot.apprtc.DISABLE_BUILT_IN_AGC";
-    public static final String EXTRA_DISABLE_BUILT_IN_NS = "org.appspot.apprtc.DISABLE_BUILT_IN_NS";
-    public static final String EXTRA_DISABLE_WEBRTC_AGC_AND_HPF =
-            "org.appspot.apprtc.DISABLE_WEBRTC_GAIN_CONTROL";
-    public static final String EXTRA_CMDLINE = "org.appspot.apprtc.CMDLINE";
-    public static final String EXTRA_RUNTIME = "org.appspot.apprtc.RUNTIME";
-    public static final String EXTRA_ENABLE_RTCEVENTLOG = "org.appspot.apprtc.ENABLE_RTCEVENTLOG";
-    public static final String EXTRA_VIDEO_FILE_AS_CAMERA = "org.appspot.apprtc.VIDEO_FILE_AS_CAMERA";
-    public static final String EXTRA_SCREENCAPTURE = "org.appspot.apprtc.SCREENCAPTURE";
+    public static final String EXTRA_DISPLAY_HUD = "DISPLAY_HUD";
+    private static final String[] MANDATORY_PERMISSIONS = {"android.permission.MODIFY_AUDIO_SETTINGS", "android.permission.RECORD_AUDIO", "android.permission.INTERNET"};
+    public static final String EXTRA_PROTOCOL = "PROTOCOL";
+    public static final String EXTRA_CAMERA2 = "CAMERA2";
+    public static final String EXTRA_NEGOTIATED = "NEGOTIATED";
+    public static final String EXTRA_DATA_CHANNEL_ENABLED = "DATA_CHANNEL_ENABLED";
+    public static final String EXTRA_ORDERED = "ORDERED";
+    public static final String EXTRA_MAX_RETRANSMITS_MS = "MAX_RETRANSMITS_MS";
+    public static final String EXTRA_MAX_RETRANSMITS = "MAX_RETRANSMITS";
+    public static final String EXTRA_LOOPBACK = "LOOPBACK";
+    public static final String EXTRA_VIDEO_CALL = "VIDEO_CALL";
+    public static final String EXTRA_VIDEO_FPS = "VIDEO_FPS";
+    public static final String EXTRA_VIDEO_BITRATE = "VIDEO_BITRATE";
+    public static final String EXTRA_VIDEOCODEC = "VIDEOCODEC";
+    public static final String EXTRA_HWCODEC_ENABLED = "HWCODEC";
+    public static final String EXTRA_FLEXFEC_ENABLED = "FLEXFEC";
+    public static final String EXTRA_AUDIO_BITRATE = "AUDIO_BITRATE";
+    public static final String EXTRA_AUDIOCODEC = "AUDIOCODEC";
+    public static final String EXTRA_NOAUDIOPROCESSING_ENABLED = "NOAUDIOPROCESSING";
+    public static final String EXTRA_AECDUMP_ENABLED = "AECDUMP";
+    public static final String EXTRA_SAVE_INPUT_AUDIO_TO_FILE_ENABLED = "SAVE_INPUT_AUDIO_TO_FILE";
+    public static final String EXTRA_OPENSLES_ENABLED = "OPENSLES";
+    public static final String EXTRA_DISABLE_BUILT_IN_AEC = "DISABLE_BUILT_IN_AEC";
+    public static final String EXTRA_DISABLE_BUILT_IN_AGC = "DISABLE_BUILT_IN_AGC";
+    public static final String EXTRA_DISABLE_BUILT_IN_NS = "DISABLE_BUILT_IN_NS";
+    public static final String EXTRA_DISABLE_WEBRTC_AGC_AND_HPF = "DISABLE_WEBRTC_GAIN_CONTROL";
+    public static final String EXTRA_CMDLINE = "CMDLINE";
+    public static final String EXTRA_RUNTIME = "RUNTIME";
+    public static final String EXTRA_ENABLE_RTCEVENTLOG = "oENABLE_RTCEVENTLOG";
+    public static final String EXTRA_VIDEO_FILE_AS_CAMERA = "VIDEO_FILE_AS_CAMERA";
+    public static final String EXTRA_SCREENCAPTURE = "SCREENCAPTURE";
+    public static final String EXTRA_SAVE_REMOTE_VIDEO_TO_FILE = "SAVE_REMOTE_VIDEO_TO_FILE";
+    public static final String EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_WIDTH = "SAVE_REMOTE_VIDEO_TO_FILE_WIDTH";
+    public static final String EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_HEIGHT = "SAVE_REMOTE_VIDEO_TO_FILE_HEIGHT";
+    public static final String EXTRA_TRACING = "TRACING";
+    private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA"};
+
+    private static final String TAG = "MainActivity";
     private static final String stunServer = "stun:firstlineconnect.com";
     private static final String turnServer = "turn:firstlineconnect.com";
-    public static final String EXTRA_SAVE_REMOTE_VIDEO_TO_FILE =
-            "org.appspot.apprtc.SAVE_REMOTE_VIDEO_TO_FILE";
-    public static final String EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_WIDTH =
-            "org.appspot.apprtc.SAVE_REMOTE_VIDEO_TO_FILE_WIDTH";
-    public static final String EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_HEIGHT =
-            "org.appspot.apprtc.SAVE_REMOTE_VIDEO_TO_FILE_HEIGHT";
+
     private static Intent mediaProjectionPermissionResultData;
     private static int mediaProjectionPermissionResultCode;
+
     private final ProxyVideoSink remoteProxyRenderer = new ProxyVideoSink();
     private boolean callControlFragmentVisible = true;
 
@@ -154,37 +167,7 @@ public class MainActivity extends AppCompatActivity implements
     private SurfaceViewRenderer pipRenderer;
     @Nullable
     private SurfaceViewRenderer fullscreenRenderer;
-
-    @Override
-    public void onCallHangup() {
-
-    }
-
-    @Override
-    public void onCameraSwitch() {
-        if (peerConnectionClient != null) {
-            peerConnectionClient.switchCamera();
-        }
-    }
-
-
-    @Override
-    public void onVideoScalingSwitch(RendererCommon.ScalingType scalingType) {
-        fullscreenRenderer.setScalingType(scalingType);
-
-    }
-
-    @Override
-    public void onCaptureFormatChange(int width, int height, int framerate) {
-        if (peerConnectionClient != null) {
-            peerConnectionClient.changeCaptureFormat(width, height, framerate);
-        }
-    }
-
-    @Override
-    public boolean onToggleMic() {
-        return false;
-    }
+    private boolean isTracking;
 
     private static class ProxyVideoSink implements VideoSink {
         private VideoSink target;
@@ -204,8 +187,9 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    private Pointer pointer = new Pointer();
     private static final int CAPTURE_PERMISSION_REQUEST_CODE = 1;
-    private ArFragment fragment;
+    private boolean isHitting;
     private final List<VideoSink> remoteSinks = new ArrayList<>();
     private boolean screencaptureEnabled;
     private final ProxyVideoSink localProxyVideoSink = new ProxyVideoSink();
@@ -215,8 +199,6 @@ public class MainActivity extends AppCompatActivity implements
     @Nullable
     private WebRtcInterface.SignalingParameters signalingParameters;
     private int REQUEST_CODE_PERMISSION = 10;
-    private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA"};
-    private static final String TAG = "MainActivity";
     private FirebaseAuth mAuth;
     @Nullable
     private VideoFileRenderer videoFileRenderer;
@@ -224,68 +206,36 @@ public class MainActivity extends AppCompatActivity implements
     private PeerConnectionClient.PeerConnectionParameters peerConnectionParameters;
     private MyViewModel myViewModel;
     private SocketConnectionHandler socketConnectionHandler;
-    public static final String EXTRA_TRACING = "org.appspot.apprtc.TRACING";
     private TextureView textureView;
     private WebRtcInterface.SignalingEvents events;
-    private SessionSdp sessionSdp;
+    private boolean commandLineRun;
+    private boolean isSwappedFeeds;
     @Nullable
     private PeerConnectionClient peerConnectionClient;
     Gson gson = new Gson();
-    final EglBase eglBase = EglBase.create();
     private CallFragment callFragment;
     private fragment_hud hudFragment;
-
-    @Override
-    public void onLocalDescription(final SessionDescription sdp) {
-        Log.d(TAG, "onLocalDescription: " + sdp);
-        sendingSdp(sdp);
-    }
-
-    @Override
-    public void onIceCandidate(IceCandidate iceCandidate) {
-        Log.d(TAG, "onIceCandidate: Trying to go to SendLocalIceCandidate");
-        sendLocalIceCandidate(iceCandidate);
-
-    }
-
-    @Override
-    public void onIceConnected() {
-        runOnUiThread(() -> {
-            Log.d(TAG, "onIceConnected: IceCandidate Connected");
-        });
-    }
-
-    @Override
-    public void onIceDisconnected() {
-
-    }
+    private ModelLoader modelLoader;
+    private ArFragment fragment;
+    final EglBase eglBase = EglBase.create();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-                | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-            getWindow().getDecorView().setSystemUiVisibility(getSystemUiVisibility());
-        }
-
-        mAuth = FirebaseAuth.getInstance();
         setContentView(R.layout.activity_main);
 
-        fragment = (ArFragment) getSupportFragmentManager().findFragmentById(R.id.sceneform_fragment);
+        mAuth = FirebaseAuth.getInstance();
         myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
 
-        //auth = FirebaseAuth.getInstance();
+        // fragment = (ArFragment)
+        //   getSupportFragmentManager().findFragmentById(R.id.fullscreen_video_view);
 
-        fullscreenRenderer = findViewById(R.id.fullscreen_video_view);
-        pipRenderer = findViewById(R.id.pip_video_view);
-        callFragment = new CallFragment();
-        hudFragment = new fragment_hud();
+        //  fragment.getArSceneView().getScene().addOnUpdateListener(frameTime -> {
+        //     fragment.onUpdate(frameTime);
+        //     onUpdate();
+        //   });
 
-
-
+        // modelLoader = new ModelLoader(new WeakReference<>(this));
 
         try {
             socketConnectionHandler = new SocketConnectionHandler(this);
@@ -293,8 +243,11 @@ public class MainActivity extends AppCompatActivity implements
             e.printStackTrace();
         }
 
-
         ConnectToSocket();
+        fullscreenRenderer = findViewById(R.id.fullscreen_video_view);
+        pipRenderer = findViewById(R.id.pip_video_view);
+        callFragment = new CallFragment();
+        hudFragment = new fragment_hud();
 
         final Intent intent = getIntent();
         final EglBase eglBase = EglBase.create();
@@ -320,6 +273,7 @@ public class MainActivity extends AppCompatActivity implements
         fullscreenRenderer.setEnableHardwareScaler(false);
 
         setSwappedFeeds(true /* isSwappedFeeds */);
+
 
 
         boolean loopback = intent.getBooleanExtra(EXTRA_LOOPBACK, false);
@@ -425,14 +379,152 @@ public class MainActivity extends AppCompatActivity implements
         final Observer<? super WebRtcInterface.SignalingParameters> webRtcObserver = newWebRTCMessage -> {
             Log.d(TAG, "onCreate: WebRTCMessageObserver");
             inistializeWebRtcClient();
-
             peerConnectionClient.settingRemoteDescription(newWebRTCMessage.offerSdp);
         };
 
         myViewModel.getEventMessage().observe(this, nameObserver);
         myViewModel.getMessageToWebRTC().observe(this, webRtcObserver);
 
+/*
+        fragment = (ArFragment) getSupportFragmentManager().findFragmentById(R.id.call_fragment_container);
+        fragment.getArSceneView().getScene().addOnUpdateListener(frameTime -> {
+            fragment.onUpdate(frameTime);
+            onUpdate();
+        });
+
+ */
     }
+
+    private void onUpdate() {
+        boolean trackingChanged = updateTracking();
+        View contentView = findViewById(android.R.id.content);
+        if (trackingChanged) {
+            if (isTracking) {
+                contentView.getOverlay().add(pointer);
+            } else {
+                contentView.getOverlay().remove(pointer);
+            }
+            contentView.invalidate();
+        }
+
+        if (isTracking) {
+            boolean hitTestChanged = updateHitTest();
+            if (hitTestChanged) {
+                pointer.setEnabled(isHitting);
+                contentView.invalidate();
+            }
+        }
+    }
+
+    private boolean updateTracking() {
+        Frame frame = fragment.getArSceneView().getArFrame();
+        boolean wasTracking = isTracking;
+        isTracking = frame != null &&
+                frame.getCamera().getTrackingState() == TrackingState.TRACKING;
+        return isTracking != wasTracking;
+    }
+
+    private boolean updateHitTest() {
+        Frame frame = fragment.getArSceneView().getArFrame();
+        android.graphics.Point pt = getScreenCenter();
+        List<HitResult> hits;
+        boolean wasHitting = isHitting;
+        isHitting = false;
+        if (frame != null) {
+            hits = frame.hitTest(pt.x, pt.y);
+            for (HitResult hit : hits) {
+                Trackable trackable = hit.getTrackable();
+                if (trackable instanceof Plane &&
+                        ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
+                    isHitting = true;
+                    break;
+                }
+            }
+        }
+        return wasHitting != isHitting;
+    }
+
+    private android.graphics.Point getScreenCenter() {
+        View vw = findViewById(android.R.id.content);
+        return new android.graphics.Point(vw.getWidth() / 2, vw.getHeight() / 2);
+    }
+
+    private void initializeGarllery() {
+        FrameLayout layoutFrame = findViewById(R.id.fullscreen_video_view);
+
+        ImageView arrow = new ImageView(this);
+        arrow.setContentDescription("arrow");
+        layoutFrame.addView(arrow);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private void addObject(Uri model) {
+        Frame frame = fragment.getArSceneView().getArFrame();
+        android.graphics.Point pt = getScreenCenter();
+        List<HitResult> hits;
+        if (frame != null) {
+            hits = frame.hitTest(pt.x, pt.y);
+            for (HitResult hit : hits) {
+                Trackable trackable = hit.getTrackable();
+                if (trackable instanceof Plane && ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
+                    modelLoader.loadModel(hit.createAnchor(), model);
+                    break;
+
+                }
+            }
+        }
+    }
+
+    public class ModelLoader {
+        private final WeakReference<MainActivity> owner;
+        private static final String TAG = "ModelLoader";
+
+        public ModelLoader(WeakReference<MainActivity> owner) {
+            this.owner = owner;
+        }
+
+        @RequiresApi(api = Build.VERSION_CODES.N)
+        void loadModel(Anchor anchor, Uri uri) {
+            if (owner.get() == null) {
+                Log.d(TAG, "loadModel: Cannot Define Load Model");
+                return;
+            }
+            ModelRenderable.builder()
+                    .setSource(owner.get(), uri)
+                    .build()
+                    .handle((modelRenderable, throwable) -> {
+                        MainActivity activity = owner.get();
+                        if (activity == null) {
+                            return null;
+                        } else if (throwable != null) {
+                            activity.onException(throwable);
+                        } else {
+                            activity.addNodeToScene(anchor, modelRenderable);
+                        }
+                        return null;
+                    });
+            return;
+        }
+    }
+
+    public void addNodeToScene(Anchor anchor, ModelRenderable renderable) {
+        AnchorNode anchorNode = new AnchorNode(anchor);
+        TransformableNode node = new TransformableNode(fragment.getTransformationSystem());
+        node.setRenderable(renderable);
+        node.setParent(anchorNode);
+        fragment.getArSceneView().getScene().addChild(anchorNode);
+        node.select();
+    }
+
+    public void onException(Throwable throwable) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setMessage(throwable.getMessage())
+                .setTitle("Codelab error!");
+        AlertDialog dialog = builder.create();
+        dialog.show();
+        return;
+    }
+
 
     private void initCamera() {
 
@@ -845,6 +937,62 @@ public class MainActivity extends AppCompatActivity implements
 
         });
     }
+
+    @Override
+    public void onCallHangup() {
+
+    }
+
+    @Override
+    public void onCameraSwitch() {
+        if (peerConnectionClient != null) {
+            peerConnectionClient.switchCamera();
+        }
+    }
+
+    @Override
+    public void onVideoScalingSwitch(RendererCommon.ScalingType scalingType) {
+        fullscreenRenderer.setScalingType(scalingType);
+
+    }
+
+    @Override
+    public void onCaptureFormatChange(int width, int height, int framerate) {
+        if (peerConnectionClient != null) {
+            peerConnectionClient.changeCaptureFormat(width, height, framerate);
+        }
+    }
+
+    @Override
+    public boolean onToggleMic() {
+        return false;
+    }
+
+    @Override
+    public void onLocalDescription(final SessionDescription sdp) {
+        Log.d(TAG, "onLocalDescription: " + sdp);
+        sendingSdp(sdp);
+    }
+
+    @Override
+    public void onIceCandidate(IceCandidate iceCandidate) {
+        Log.d(TAG, "onIceCandidate: Trying to go to SendLocalIceCandidate");
+        sendLocalIceCandidate(iceCandidate);
+
+    }
+
+    @Override
+    public void onIceConnected() {
+        runOnUiThread(() -> {
+            Log.d(TAG, "onIceConnected: IceCandidate Connected");
+        });
+    }
+
+    @Override
+    public void onIceDisconnected() {
+
+    }
+
 
     @Override
     public void onRemoteIceCandidate(IceCandidate candidate) {
